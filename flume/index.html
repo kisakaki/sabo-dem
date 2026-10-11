@@ -1,0 +1,1749 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="勾配が折れ曲がる水路で、定常供給・段波・清水による堆積と侵食、粒子と流体の動きを個別要素法でブラウザ上で調べられるシミュレータ。">
+<meta property="og:url" content="https://kisakaki.github.io/sabo-dem/flume/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="勾配変化水路DEMシミュレータ">
+<meta property="og:description" content="勾配が折れ曲がる水路で、定常供給・段波・清水による堆積と侵食、粒子と流体の動きを個別要素法でブラウザ上で調べられるシミュレータ。">
+<meta property="og:image" content="https://kisakaki.github.io/sabo-dem/og-flume.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="勾配変化水路DEMシミュレータ">
+<meta name="twitter:description" content="勾配が折れ曲がる水路で、定常供給・段波・清水による堆積と侵食、粒子と流体の動きを個別要素法でブラウザ上で調べられるシミュレータ。">
+<meta name="twitter:image" content="https://kisakaki.github.io/sabo-dem/og-flume.png">
+<title>勾配変化水路DEMシミュレータ</title>
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px/1.5 system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif;-webkit-text-size-adjust:100%}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+JP:wght@400;500;600&family=Zen+Old+Mincho:wght@700&display=swap">
+<style>
+/* Layout: 実験水路のコンソール — 左に操作ラック、右に水路窓と解析ベンチ。狭い画面では 水路窓 → 操作 → 解析 の1列 */
+:root{
+  --bg:#e7ecef; --panel:#f8fafb; --ink:#13202a; --muted:#566773; --line:#ccd6dc;
+  --water:#25689a; --water-soft:#d5e5f1; --focus:#c46a1c; --lift:#1f8a7d; --cy:#7a56a8; --fast:#9b2335;
+  --grain-a:#dccaa4; --grain-b:#6f5944; --fixed:#59656e; --ok:#2e8657; --warn:#b37512; --cend:#5b4330;
+  --f-display:"Zen Old Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
+  --f-body:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c141a; --panel:#121d25; --ink:#dce6ec; --muted:#8a9ba8; --line:#22303a;
+  --water:#5aa5db; --water-soft:#12304a; --focus:#ec9a4e; --lift:#4fc2b2; --cy:#b294e0; --fast:#e8707a;
+  --grain-a:#b9a786; --grain-b:#5a4734; --fixed:#3a464f; --ok:#4cb87f; --warn:#e0a640; --cend:#e3cfa4; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c141a; --panel:#121d25; --ink:#dce6ec; --muted:#8a9ba8; --line:#22303a;
+  --water:#5aa5db; --water-soft:#12304a; --focus:#ec9a4e; --lift:#4fc2b2; --cy:#b294e0; --fast:#e8707a;
+  --grain-a:#b9a786; --grain-b:#5a4734; --fixed:#3a464f; --ok:#4cb87f; --warn:#e0a640; --cend:#e3cfa4; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.6;padding-inline:16px;padding-block:14px 40px}
+.app{max-width:1440px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.masthead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-block:4px 12px}
+.eyebrow{margin:0;font-size:11.5px;letter-spacing:.08em;color:var(--muted)}
+h1{margin:2px 0 0;font-family:var(--f-display);font-weight:700;font-size:clamp(22px,3vw,30px);letter-spacing:.02em;text-wrap:balance;line-height:1.25}
+.runbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn{font:inherit;font-size:13.5px;padding:7px 14px;border-radius:var(--r);border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+.btn.primary{background:var(--water);border-color:var(--water);color:var(--panel);font-weight:600;min-width:96px}
+.btn.pending{border-color:var(--focus);color:var(--focus);font-weight:600}
+.status{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.shell{display:grid;grid-template-columns:minmax(272px,300px) minmax(0,1fr);grid-template-areas:"rack stage" "rack ana";gap:14px;align-items:start}
+.stage{grid-area:stage;min-width:0}
+.rack{grid-area:rack;position:sticky;top:env(safe-area-inset-top,0px);max-height:100vh;overflow:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:8px}
+.ana{grid-area:ana;min-width:0;display:flex;flex-direction:column;gap:14px}
+@media (max-width:900px){.shell{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "rack" "ana"}.rack{position:static;max-height:none;overflow:visible}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.stage{padding:12px;display:flex;flex-direction:column;gap:10px}
+.stage-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.opts{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px}
+.opts select{font:inherit;font-size:13px;padding:3px 6px;border-radius:4px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.hint{margin:0;font-size:12px;color:var(--muted)}
+.cwrap{position:relative;width:100%;line-height:0}
+canvas{display:block;width:100%}
+#sim{cursor:crosshair;border-radius:4px}
+.readout{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:0;margin:0;background:var(--panel);border-top:1px solid var(--line);border-left:1px solid var(--line);border-radius:4px;overflow:hidden}
+.readout div{background:var(--panel);padding:5px 8px;min-width:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.readout dt{font-size:11px;color:var(--muted);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.readout dd{margin:0;font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:720px){.pair{grid-template-columns:minmax(0,1fr)}}
+figure{margin:0;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+figcaption,.sec-title{font-size:13px;font-weight:600;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+figcaption small,.sec-title small{font-weight:400;color:var(--muted);font-size:11.5px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0;padding:0;list-style:none;font-size:11.5px;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.legend i.dot{width:7px;height:7px;border-radius:50%}
+.legend i.dash{background:none!important;border-top:2px dashed;height:0}
+.legend i.cbar{width:46px;height:9px;border-radius:2px;background:linear-gradient(90deg,var(--panel),var(--cend));border:1px solid var(--line)}
+.btn.sm{padding:3px 10px;font-size:12.5px}
+.focus{padding:12px;display:flex;flex-direction:column;gap:10px}
+.focus-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.pill{font-size:11.5px;padding:2px 9px;border-radius:999px;border:1px solid currentColor;font-weight:600}
+.pill.rest{color:var(--ok)} .pill.move{color:var(--focus)} .pill.hold{color:var(--muted)}
+.fgrid{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:14px}
+@media (max-width:760px){.fgrid{grid-template-columns:minmax(0,1fr)}}
+.zoom{display:flex;flex-direction:column;gap:6px;min-width:0}
+#zoom{max-width:320px;border-radius:4px}
+.fright{display:flex;flex-direction:column;gap:12px;min-width:0}
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-weight:500;color:var(--muted);font-size:11.5px}
+td{font-family:var(--f-mono)}
+td:first-child{font-family:var(--f-body)}
+td .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:baseline}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px 16px;margin:0;font-size:12.5px}
+.kv div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dotted var(--line);padding:2px 0;min-width:0}
+.kv dt{color:var(--muted);white-space:nowrap}
+.kv dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tsbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.copy-msg{font-size:12px;color:var(--muted)}
+#csvbox,.csvbox{width:100%;height:90px;font-family:var(--f-mono);font-size:11px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px}
+/* rack */
+.rack details{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.rack summary{cursor:pointer;padding:9px 12px;font-weight:600;font-size:13.5px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.rack summary::-webkit-details-marker{display:none}
+.rack summary::after{content:"+";color:var(--muted);font-family:var(--f-mono)}
+.rack details[open] summary::after{content:"−"}
+.rack .body{padding:2px 12px 12px;display:flex;flex-direction:column;gap:10px}
+.fld{display:flex;flex-direction:column;gap:2px}
+.fld .lab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12.5px}
+.fld .lab span:last-child{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fld .ctl{display:flex;gap:8px;align-items:center}
+.fld input[type=range]{flex:1;min-width:0;accent-color:var(--water)}
+.fld input[type=number]{width:78px;font-family:var(--f-mono);font-size:12.5px;padding:3px 5px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+.fld .unit{font-size:11.5px;color:var(--muted);min-width:18px}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{flex:1;font:inherit;font-size:12.5px;padding:6px 4px;border:0;border-right:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;line-height:1.3}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--water);color:var(--panel);font-weight:600}
+.chk{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.chk input{accent-color:var(--water)}
+.note{margin:0;font-size:11.5px;color:var(--muted);line-height:1.5}
+.tag{font-size:10.5px;color:var(--focus);border:1px solid currentColor;border-radius:3px;padding:0 4px;margin-left:4px;white-space:nowrap}
+.notes{padding:4px 14px}
+.notes summary{cursor:pointer;padding:8px 0;font-weight:600}
+.notes ul{margin:0 0 12px;padding-left:1.2em;max-width:78ch;font-size:13px}
+.notes li{margin:4px 0}
+code{font-family:var(--f-mono);font-size:12px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
+.wide{grid-column:1/-1}
+.ana-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:900px){.ana-grid{grid-template-columns:minmax(0,1fr)}}
+.segtbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.segtbl th{font-weight:500;color:var(--muted);font-size:11.5px;text-align:left;padding:2px 4px;border-bottom:1px solid var(--line)}
+.segtbl td{padding:3px 4px;border-bottom:1px solid var(--line);font-family:var(--f-body);text-align:left}
+.segtbl input{width:64px;font-family:var(--f-mono);font-size:12.5px;padding:2px 4px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+.segtbl button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:4px;padding:1px 6px;cursor:pointer}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets .btn{padding:4px 9px;font-size:12px}
+#overview{cursor:pointer;border-radius:4px}
+#zoomv{cursor:crosshair;border-radius:4px}
+#lprof{cursor:pointer}
+.legend i.cdiv{width:46px;height:9px;border-radius:2px;background:linear-gradient(90deg,var(--water),var(--panel),var(--cend));border:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+
+<div class="app">
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">個別要素法（2次元）× 鉛直1次元流れの柱群　勾配の折れ点での堆積・侵食と、粒子と流体の移動</p>
+      <h1>勾配変化水路DEMシミュレータ</h1>
+    </div>
+    <div class="runbar">
+      <button id="run" class="btn primary" type="button">一時停止</button>
+      <button id="reset" class="btn" type="button">水路を再生成</button>
+      <span id="status" class="status">準備中</span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <section class="stage card" aria-label="水路">
+      <div class="stage-head">
+        <div class="opts">
+          <label>粒子の色
+            <select id="colmode">
+              <option value="vel">流下方向速度</option>
+              <option value="size">粒径</option>
+              <option value="state">静止／移動／休止</option>
+            </select>
+          </label>
+          <label>拡大幅
+            <select id="zoomw">
+              <option value="40">40d</option>
+              <option value="80" selected>80d</option>
+              <option value="160">160d</option>
+            </select>
+          </label>
+          <label class="chk"><input type="checkbox" id="follow">先端を追う</label>
+          <label class="chk"><input type="checkbox" id="chains">接触力（力鎖）</label>
+        </div>
+        <p class="hint">全体図をタップすると拡大位置が、拡大図の粒子をタップすると注目粒子が変わります</p>
+      </div>
+      <div class="cwrap"><canvas id="overview" aria-label="水路の全体図"></canvas></div>
+      <div class="cwrap"><canvas id="zoomv" aria-label="水路の拡大図"></canvas></div>
+      <dl class="readout">
+        <div><dt>経過時間 t</dt><dd id="ro_t">–</dd></div>
+        <div><dt>実時間比</dt><dd id="ro_rt">–</dd></div>
+        <div><dt>粒子数 N（休止）</dt><dd id="ro_n">–</dd></div>
+        <div><dt>水の先端</dt><dd id="ro_xw">–</dd></div>
+        <div><dt>土砂の先端</dt><dd id="ro_xs">–</dd></div>
+        <div><dt>堆積の先端</dt><dd id="ro_xd">–</dd></div>
+        <div><dt>供給土砂量</dt><dd id="ro_vin">–</dd></div>
+        <div><dt>堆積・侵食量</dt><dd id="ro_vs">–</dd></div>
+        <div><dt>移動中の土砂</dt><dd id="ro_vm">–</dd></div>
+        <div><dt>下流へ流出</dt><dd id="ro_vo">–</dd></div>
+      </dl>
+    </section>
+
+    <aside class="rack" aria-label="条件設定">
+      <details open>
+        <summary>水路の形状</summary>
+        <div class="body">
+          <table class="segtbl">
+            <thead><tr><th>区間</th><th>長さ [×d]</th><th>勾配 [°]</th><th></th></tr></thead>
+            <tbody id="segbody"></tbody>
+          </table>
+          <div class="presets">
+            <button type="button" class="btn" id="segadd">区間を追加</button>
+          </div>
+          <p class="note" id="seginfo"></p>
+          <div class="presets" aria-label="形状の例">
+            <button type="button" class="btn" data-preset="sm">急→緩</button>
+            <button type="button" class="btn" data-preset="ms">緩→急</button>
+            <button type="button" class="btn" data-preset="sms">急→緩→急</button>
+            <button type="button" class="btn" data-preset="ssm">急→中→緩</button>
+          </div>
+          <p class="note">勾配は 0.001〜25°。上流から順に並べます。変更は「水路を再生成」で反映されます。</p>
+        </div>
+      </details>
+
+      <details open>
+        <summary>上流の条件</summary>
+        <div class="body">
+          <div class="seg" role="group" aria-label="上流の条件">
+            <button type="button" id="mode_steady" aria-pressed="true">定常供給</button>
+            <button type="button" id="mode_surge" aria-pressed="false">段波</button>
+            <button type="button" id="mode_clear" aria-pressed="false">清水</button>
+          </div>
+          <div id="g_q">
+            <div class="fld"><div class="lab"><span>単位幅流量 q（水＋土砂）</span><span id="q_info"></span></div>
+              <div class="ctl"><input type="range" id="q_r" min="0.005" max="0.15" step="0.001"><input type="number" id="q_n" min="0.001" max="0.3" step="0.001"><span class="unit">m²/s</span></div></div>
+            <div class="fld" id="g_cin"><div class="lab"><span>供給濃度 C_in</span><span id="cin_info"></span></div>
+              <div class="ctl"><input type="range" id="cin_r" min="0" max="0.5" step="0.01"><input type="number" id="cin_n" min="0" max="0.5" step="0.01"><span class="unit"></span></div></div>
+            <div class="fld"><div class="lab"><span>供給時間</span><span></span></div>
+              <div class="ctl"><input type="range" id="tsup_r" min="0.5" max="60" step="0.5"><input type="number" id="tsup_n" min="0.1" max="600" step="0.5"><span class="unit">s</span></div></div>
+          </div>
+          <div id="g_surge" hidden>
+            <div class="fld"><div class="lab"><span>貯留区間の長さ<span class="tag">再生成</span></span><span></span></div>
+              <div class="ctl"><input type="range" id="lres_r" min="10" max="100" step="1"><input type="number" id="lres_n" min="5" max="200" step="1"><span class="unit">×d</span></div></div>
+            <div class="fld"><div class="lab"><span>貯留土砂の高さ<span class="tag">再生成</span></span><span></span></div>
+              <div class="ctl"><input type="range" id="hres_r" min="2" max="30" step="1"><input type="number" id="hres_n" min="1" max="40" step="1"><span class="unit">×d</span></div></div>
+            <div class="fld"><div class="lab"><span>その上の水深<span class="tag">再生成</span></span><span></span></div>
+              <div class="ctl"><input type="range" id="wres_r" min="0" max="20" step="0.5"><input type="number" id="wres_n" min="0" max="40" step="0.5"><span class="unit">×d</span></div></div>
+            <p class="note">開始と同時にゲートを開けます。貯留土砂の空隙は水で満たされています。</p>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>河床</summary>
+        <div class="body">
+          <div class="fld"><div class="lab"><span>河床厚 H_b<span class="tag">再生成</span></span><span id="hb_info"></span></div>
+            <div class="ctl"><input type="range" id="hb_r" min="0" max="30" step="1"><input type="number" id="hb_n" min="0" max="60" step="1"><span class="unit">×d</span></div></div>
+          <div class="fld"><div class="lab"><span>移動床の開始位置<span class="tag">再生成</span></span><span></span></div>
+            <div class="ctl"><input type="range" id="bf_r" min="8" max="150" step="1"><input type="number" id="bf_n" min="4" max="1000" step="1"><span class="unit">×d</span></div></div>
+          <p class="note">これより上流は同じ高さの固定床（床固め）です。河床は常に飽和しているとみなします。</p>
+          <div class="fld"><div class="lab"><span>堆積濃度 C*<span class="tag">再生成</span></span><span></span></div>
+            <div class="ctl"><input type="range" id="cs_r" min="0.5" max="0.7" step="0.01"><input type="number" id="cs_n" min="0.5" max="0.7" step="0.01"><span class="unit"></span></div></div>
+          <div class="fld"><div class="lab"><span>乱数の種<span class="tag">再生成</span></span><span></span></div>
+            <div class="ctl"><input type="range" id="seed_r" min="1" max="100" step="1"><input type="number" id="seed_n" min="1" max="100000" step="1"><span class="unit"></span></div></div>
+          <label class="chk"><input type="checkbox" id="sleep">深部の静止粒子を休止させて高速化</label>
+        </div>
+      </details>
+
+      <details>
+        <summary>河床材料</summary>
+        <div class="body">
+          <div class="seg" role="group" aria-label="粒度">
+            <button type="button" id="grad_uniform" aria-pressed="true">単一粒径</button>
+            <button type="button" id="grad_binary" aria-pressed="false">2粒径</button>
+            <button type="button" id="grad_lognormal" aria-pressed="false">連続粒度</button>
+          </div>
+          <div id="g_uniform" class="body" style="padding:0">
+            <div class="fld"><div class="lab"><span>粒径 d</span><span></span></div>
+              <div class="ctl"><input type="range" id="d_r" min="2" max="40" step="0.5"><input type="number" id="d_n" min="2" max="40" step="0.5"><span class="unit">mm</span></div></div>
+          </div>
+          <div id="g_binary" class="body" style="padding:0" hidden>
+            <div class="fld"><div class="lab"><span>細粒 d₁</span><span></span></div>
+              <div class="ctl"><input type="range" id="d1_r" min="2" max="40" step="0.5"><input type="number" id="d1_n" min="2" max="40" step="0.5"><span class="unit">mm</span></div></div>
+            <div class="fld"><div class="lab"><span>粗粒 d₂</span><span></span></div>
+              <div class="ctl"><input type="range" id="d2_r" min="2" max="40" step="0.5"><input type="number" id="d2_n" min="2" max="40" step="0.5"><span class="unit">mm</span></div></div>
+            <div class="fld"><div class="lab"><span>粗粒の体積率 p₂</span><span></span></div>
+              <div class="ctl"><input type="range" id="p2_r" min="0" max="1" step="0.05"><input type="number" id="p2_n" min="0" max="1" step="0.05"><span class="unit"></span></div></div>
+          </div>
+          <div id="g_lognormal" class="body" style="padding:0" hidden>
+            <div class="fld"><div class="lab"><span>中央粒径 d₅₀</span><span></span></div>
+              <div class="ctl"><input type="range" id="d50_r" min="2" max="40" step="0.5"><input type="number" id="d50_n" min="2" max="40" step="0.5"><span class="unit">mm</span></div></div>
+            <div class="fld"><div class="lab"><span>幾何標準偏差 σ_g</span><span></span></div>
+              <div class="ctl"><input type="range" id="sg_r" min="1.05" max="2.2" step="0.05"><input type="number" id="sg_n" min="1.05" max="2.2" step="0.05"><span class="unit"></span></div></div>
+          </div>
+          <div class="fld"><div class="lab"><span>粒子密度 σ</span><span></span></div>
+            <div class="ctl"><input type="range" id="sig_r" min="1800" max="3200" step="10"><input type="number" id="sig_n" min="1800" max="3200" step="10"><span class="unit">kg/m³</span></div></div>
+          <p class="note">この節の項目は「水路を再生成」で反映されます。</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>接触・流体</summary>
+        <div class="body">
+          <div class="fld"><div class="lab"><span>粒子間摩擦係数 μ</span><span></span></div>
+            <div class="ctl"><input type="range" id="mu_r" min="0.1" max="1.2" step="0.01"><input type="number" id="mu_n" min="0.1" max="1.2" step="0.01"><span class="unit"></span></div></div>
+          <div class="fld"><div class="lab"><span>反発係数 e</span><span></span></div>
+            <div class="ctl"><input type="range" id="e_r" min="0.05" max="0.95" step="0.01"><input type="number" id="e_n" min="0.05" max="0.95" step="0.01"><span class="unit"></span></div></div>
+          <div class="fld"><div class="lab"><span>転がり抵抗係数 μ_r</span><span></span></div>
+            <div class="ctl"><input type="range" id="mur_r" min="0" max="2" step="0.05"><input type="number" id="mur_n" min="0" max="2" step="0.05"><span class="unit"></span></div></div>
+          <div class="fld"><div class="lab"><span>内部摩擦角 φ（C∞ の算定用）</span><span></span></div>
+            <div class="ctl"><input type="range" id="phi_r" min="20" max="45" step="0.5"><input type="number" id="phi_n" min="20" max="45" step="0.5"><span class="unit">°</span></div></div>
+          <p class="note">既定値（μ=0.8、μ_r=1.5）は周期境界版で較正した値で、実効内部摩擦角は約26°です。φ にこの値を入れると、高橋の C∞ と同じ土俵で比べられます。</p>
+          <div class="fld"><div class="lab"><span>流体密度 ρ</span><span></span></div>
+            <div class="ctl"><input type="range" id="rho_r" min="1000" max="1600" step="10"><input type="number" id="rho_n" min="1000" max="1600" step="10"><span class="unit">kg/m³</span></div></div>
+          <div class="fld"><div class="lab"><span>揚力係数 C_L</span><span></span></div>
+            <div class="ctl"><input type="range" id="cl_r" min="0" max="0.6" step="0.01"><input type="number" id="cl_n" min="0" max="0.6" step="0.01"><span class="unit"></span></div></div>
+          <label class="chk"><input type="checkbox" id="turb">乱れ変動（禰津の乱れ強度分布）</label>
+        </div>
+      </details>
+
+      <details open>
+        <summary>測点と注目粒子</summary>
+        <div class="body">
+          <div class="fld"><div class="lab"><span>測点の位置 x</span><span id="xs_info"></span></div>
+            <div class="ctl"><input type="range" id="xs_r" min="1" max="300" step="1"><input type="number" id="xs_n" min="0" max="2000" step="1"><span class="unit">×d</span></div></div>
+          <p class="note">縦断図をタップしても選べます。鉛直分布と時系列はこの位置（幅3d）で集計します。</p>
+          <div class="fld"><div class="lab"><span>注目粒子の粒径 d_f</span><span id="df_info"></span></div>
+            <div class="ctl"><input type="range" id="df_r" step="0.1"><input type="number" id="df_n" step="0.1"><span class="unit">mm</span></div></div>
+          <div class="fld"><div class="lab"><span>設置深さ（河床面→粒子中心）</span><span id="fz_info"></span></div>
+            <div class="ctl"><input type="range" id="fz_r" min="0" max="20" step="0.25"><input type="number" id="fz_n" min="0" max="60" step="0.25"><span class="unit">×d</span></div></div>
+          <button class="btn" type="button" id="place">測点の位置に置き直す</button>
+          <label class="chk"><input type="checkbox" id="hold">位置を固定（力センサーとして計測）</label>
+        </div>
+      </details>
+    </aside>
+
+    <div class="ana">
+      <figure class="card">
+        <figcaption>縦断図 <small id="lp_sub">標高 [×d]（鉛直方向を拡大表示）、横軸 x [×d]</small></figcaption>
+        <canvas id="lprof" aria-label="縦断図"></canvas>
+        <ul class="legend">
+          <li><i style="background:var(--fixed)"></i>固定床の基準線</li>
+          <li><i class="dash" style="color:var(--muted)"></i>初期河床面</li>
+          <li><i style="background:var(--cend)"></i>河床面 z_b</li>
+          <li><i style="background:var(--water)"></i>水面 η</li>
+          <li><i style="background:var(--focus)"></i>測点</li>
+        </ul>
+      </figure>
+
+      <div class="ana-grid">
+        <figure class="card">
+          <figcaption>河床変動と水深の縦断分布 <small>[×d]</small></figcaption>
+          <canvas id="ldist" aria-label="河床変動と水深の縦断分布"></canvas>
+          <ul class="legend">
+            <li><i style="background:var(--cend)"></i>Δz_b（正が堆積）</li>
+            <li><i style="background:var(--water)"></i>水深 h</li>
+          </ul>
+        </figure>
+        <figure class="card">
+          <figcaption>流動層濃度の縦断分布 <small>C̄/C* と、局所勾配での高橋の C∞/C*</small></figcaption>
+          <canvas id="lconc" aria-label="濃度の縦断分布"></canvas>
+          <ul class="legend">
+            <li><i style="background:var(--grain-b)"></i>流動層 C̄/C*</li>
+            <li><i class="dash" style="color:var(--focus)"></i>高橋 C∞/C*（区間の勾配）</li>
+            <li><i style="background:var(--lift)"></i>流砂量 q_s（右軸）</li>
+          </ul>
+        </figure>
+      </div>
+
+      <figure class="card">
+        <figcaption>x–t 図 <small id="xt_sub"></small></figcaption>
+        <div class="opts">
+          <label>表示する量
+            <select id="xtvar">
+              <option value="dz">河床変動 Δz_b</option>
+              <option value="h">水深 h</option>
+              <option value="C">流動層濃度 C̄/C*</option>
+            </select>
+          </label>
+        </div>
+        <canvas id="xt" aria-label="x–t 図"></canvas>
+        <ul class="legend">
+          <li id="xt_lg"><i class="cdiv"></i><span id="xt_scale">侵食 ← 0 → 堆積</span></li>
+          <li><i style="background:var(--water)"></i>水の先端</li>
+          <li><i style="background:var(--ink)"></i>土砂の先端</li>
+          <li><i class="dash" style="color:var(--focus)"></i>勾配の折れ点</li>
+        </ul>
+      </figure>
+
+      <div class="ana-grid">
+        <figure class="card">
+          <figcaption>測点の鉛直分布 <small id="sp_sub">縦軸 (y−z_b)/d</small></figcaption>
+          <div class="opts">
+            <label>時間平均 τ
+              <select id="ctau"><option value="0.1">0.1 s</option><option value="0.5" selected>0.5 s</option><option value="2">2 s</option></select>
+            </label>
+            <button class="btn sm" type="button" id="copyprof">CSVでコピー</button><span class="copy-msg" id="profmsg"></span>
+          </div>
+          <canvas id="sprof" aria-label="測点の鉛直分布"></canvas>
+          <ul class="legend">
+            <li><i style="background:var(--water)"></i>流体 u_f（上軸 m/s）</li>
+            <li><i class="dot" style="background:var(--grain-b)"></i>粒子 u_p</li>
+            <li><i style="background:var(--cend)"></i>濃度 C（下軸）</li>
+            <li data-mix><i style="background:var(--lift)"></i>細粒 C_f</li>
+            <li data-mix><i style="background:var(--cy)"></i>粗粒 C_c</li>
+          </ul>
+          <textarea id="profbox" class="csvbox" hidden readonly aria-label="CSV"></textarea>
+        </figure>
+        <figure class="card">
+          <figcaption>測点の時系列</figcaption>
+          <div class="opts"><button class="btn sm" type="button" id="copyts">CSVでコピー</button><span class="copy-msg" id="tsmsg"></span></div>
+          <canvas id="sts" aria-label="測点の時系列"></canvas>
+          <ul class="legend">
+            <li><i style="background:var(--water)"></i>水深 h/d</li>
+            <li><i style="background:var(--cend)"></i>Δz_b/d</li>
+            <li><i style="background:var(--grain-b)"></i>C̄/C*</li>
+            <li><i style="background:var(--lift)"></i>q_s [cm²/s]</li>
+          </ul>
+          <textarea id="tsbox" class="csvbox" hidden readonly aria-label="CSV"></textarea>
+        </figure>
+      </div>
+
+      <div class="ana-grid">
+        <figure class="card">
+          <figcaption>土砂収支 <small>単位幅あたりの体積 [cm²]（空隙を除いた実体積）</small></figcaption>
+          <canvas id="bud" aria-label="土砂収支"></canvas>
+          <ul class="legend">
+            <li><i style="background:var(--ink)"></i>供給</li>
+            <li><i style="background:var(--cend)"></i>堆積・侵食（静止土砂の増減）</li>
+            <li><i style="background:var(--water)"></i>移動中</li>
+            <li><i style="background:var(--focus)"></i>下流へ流出</li>
+          </ul>
+          <p class="hint" id="budstat"></p>
+        </figure>
+        <figure class="card">
+          <figcaption>先端位置の時間変化 <small>[×d]</small></figcaption>
+          <canvas id="fronts" aria-label="先端位置"></canvas>
+          <ul class="legend">
+            <li><i style="background:var(--water)"></i>水の先端</li>
+            <li><i style="background:var(--ink)"></i>土砂の先端</li>
+            <li><i style="background:var(--cend)"></i>堆積の先端（Δz_b &gt; 0.5d）</li>
+          </ul>
+          <div class="opts"><button class="btn sm" type="button" id="copylp">縦断分布をCSVでコピー</button><span class="copy-msg" id="lpmsg"></span></div>
+          <textarea id="lpbox" class="csvbox" hidden readonly aria-label="CSV"></textarea>
+        </figure>
+      </div>
+
+      <section class="card focus" aria-label="注目粒子の解析">
+        <div class="focus-head">
+          <div class="sec-title">注目粒子の力と応力 <small>t：河床に沿って下流向き、n：河床に直交（上向き正）、W′：水中重量</small></div>
+          <span id="f_pill" class="pill rest">静止</span>
+        </div>
+        <div class="fgrid">
+          <div class="zoom">
+            <canvas id="fzoom" aria-label="注目粒子の拡大図"></canvas>
+            <ul class="legend">
+              <li><i style="background:var(--water)"></i>抗力</li>
+              <li><i style="background:var(--lift)"></i>揚力</li>
+              <li><i style="background:var(--muted)"></i>重力＋静水圧</li>
+              <li><i style="background:var(--cy)"></i>接触力の合力</li>
+              <li><i style="background:var(--ink)"></i>接触（太さ∝F_n）</li>
+              <li><i style="background:var(--warn)"></i>滑動中の接点</li>
+            </ul>
+          </div>
+          <div class="fright">
+            <div class="tblwrap"><table id="ftab"></table></div>
+            <dl class="kv" id="fkv"></dl>
+          </div>
+        </div>
+        <div class="tsbar">
+          <div class="sec-title">力の時系列 <small>直近2秒、W′で正規化、2 ms平均、河床に沿う成分</small></div>
+          <div class="runbar"><button class="btn" type="button" id="copycsv">時系列をCSVでコピー</button><span class="copy-msg" id="copymsg"></span></div>
+        </div>
+        <canvas id="fts" aria-label="注目粒子に働く力の時系列"></canvas>
+        <ul class="legend">
+          <li><i style="background:var(--water)"></i>抗力 F_D,t</li>
+          <li><i style="background:var(--lift)"></i>揚力 F_L,n</li>
+          <li><i style="background:var(--cy)"></i>接触力 ΣF_c,t</li>
+          <li><i class="dash" style="color:var(--cy)"></i>接触力 ΣF_c,n</li>
+        </ul>
+        <textarea id="csvbox" hidden readonly aria-label="CSV"></textarea>
+      </section>
+
+      <section class="card notes">
+        <details>
+          <summary>モデルの構成と仮定</summary>
+          <ul>
+            <li><b>座標と水路</b>：x は水平（下流が正）、y は鉛直上向き、重力は鉛直下向き。固定床は上流から区間ごとの長さと勾配で決める折れ線で、粒径とすき間にばらつきのある固定粒子列で粗くしている。移動床の開始位置より上流は、同じ高さの固定床。下流端 1.2d は床固め。</li>
+            <li><b>粒子</b>：周期境界版と同じ2次元円板 DEM（線形ばね＋ダッシュポット、Cundall–Strack 摩擦、EPSD 転がり抵抗）。河床は逐次堆積（2点支持まで転がす）で作り、沈降・安定化させてから流す。</li>
+            <li><b>流体</b>：水路を幅 1d の鉛直柱に分け、各柱で水平流速 u の鉛直1次元運動方程式（混合距離モデル、河床内は粒子抗力で抑えられた浸透流）を陰解法で解く。外力は静水圧の水面勾配 −g∂η/∂x と断面平均流速による移流。柱どうしは表面水の体積の連続式で結び、Rusanov 型の数値流束で解く。流速の向きは河床付近で河床勾配、水面付近で水面勾配に沿わせる。</li>
+            <li><b>粒子に働く流体力</b>：抗力（Di Felice の空隙率補正）、揚力（粒子上下端の流速差）、静水圧による力（鉛直に浮力 ρVg、水平に −ρVg∂η/∂x）、付加質量、乱れ（禰津の乱れ強度分布の OU 過程）。</li>
+            <li><b>上流条件</b>：定常供給は、単位幅流量 q のうち水 q(1−C_in) を流入させ、土砂 qC_in に相当する粒子を流入区間（上流端〜12d）の流れの中と、その上の落とし込み帯に置く。粒径は1粒ずつ抽選し、置けるまで同じ粒径で試すので、供給土砂の粒度は河床材料の設定どおりになる（置けなかった分は持ち越し）。段波は、貯留区間の土砂（その上に水深 W_res の水）をゲートで止めておき、開始と同時に開く。清水は C_in=0。</li>
+            <li><b>河床面と濃度</b>：河床面 z_b は、柱ごとの静止粒子の面積を Δx φ_b で割って固定床の基準線に足したもの（空間 [1 2 1] 平滑化と時間の指数移動平均）。流動層濃度 C̄ は z_b〜η の粒子面積に C*/φ_b を掛けて体積濃度にしたもの。土砂量はすべて空隙を除いた実体積（面積×C*/φ_b）。</li>
+            <li><b>固定床</b>：折れ線そのものを壁として扱い、底面の粒子列のすき間から細粒が抜け落ちないようにしている。</li>
+            <li><b>仮定と限界</b>：河床は常に飽和とみなし、乾いた河床への浸透は扱わない。表面水のない区間では流体を解かず、浸透流の効果は粒子に直接かける ρVg tanθ（生成時も同じ）で表す。静水圧近似なので、跳水や先端部の鉛直加速度は表せない。円板の実効内部摩擦角は約26°で実際の礫（35°前後）より小さく、堆積が始まる勾配は実際より緩い側にずれる。2次元なので側方の広がりはない。</li>
+          </ul>
+        </details>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+/* ================= 勾配変化水路 DEM-流れ連成：計算コア =================
+   座標：x 水平（下流が正）、y 鉛直上向き。重力は (0, −g)。
+   粒子：2次元円板（質量・流体力は同径の球）。接触は線形ばね＋ダッシュポット、Cundall–Strack 摩擦、EPSD 転がり抵抗。
+   流体：水路を幅 Δx（=代表粒径）の鉛直柱に分け、各柱で水平流速 u の鉛直1次元運動方程式を陰解法で解く。
+         ρε∂u/∂t = ∂y[ρε(ν+ℓ²|∂u/∂y|)∂u/∂y] − ρεg ∂η/∂x − ρεU∂U/∂x − Σβ(u−u_p)
+         柱間は水の体積 W（空隙水を含む）の連続式 ∂W/∂t + ∂Q/∂x = 0 で結び、水面 η を W から決める（静水圧近似）。
+   上流：定常供給（流量 q と濃度 C）／段波（貯留土砂をゲート開放）／清水。下流：自由流出。 */
+const G=9.81,KAPPA=0.41,NU=1e-6,PI=Math.PI,V43=4*Math.PI/3;
+const HAS_DOM=typeof document!=='undefined';
+
+/* ---------------- parameters ---------------- */
+const P={
+  segs:[{L:120,th:12},{L:180,th:3}],   // 区間長 [×d]・勾配 [°]（上流から）
+  Hb:6,bedFrom:20,saturated:true,       // 移動床厚 [×d]、移動床の開始位置 [×d]、初期に飽和
+  grad:'uniform',d:10,d1:6,d2:15,p2:0.5,d50:10,sg:1.5,sigma:2650,Cstar:0.6,
+  mu:0.8,e:0.5,mur:1.5,phiInt:26,
+  rho:1000,turb:true,CL:0.2,
+  mode:'steady',q:0.03,Cin:0.3,Tsup:6,  // 供給：単位幅流量 [m²/s]、体積濃度、供給時間 [s]
+  Lres:30,Hres:12,Wres:6,               // 段波：貯留区間長・土砂の高さ・その上の水深 [×d]
+  seed:1,sleep:true,
+  df:10,fdepth:0,hold:false,xs:170,      // 注目粒子・測点 x [×d]
+  ctau:0.5
+};
+const D={zeta:0.2};
+function derive(){const le=Math.log(Math.min(0.99,Math.max(0.01,P.e)));D.zeta=-le/Math.sqrt(PI*PI+le*le);}
+
+/* ---------------- random（種を固定できる mulberry32） ---------------- */
+let rngS=1;function rngSeed(v){rngS=(v>>>0)||1;}
+function rnd(){rngS=(rngS+0x6D2B79F5)>>>0;let t=rngS;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296;}
+function gauss(){const u=1-rnd(),v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*PI*v);}
+const GT=new Float32Array(16384);let gseed=2463534242;
+function fillGT(){for(let i=0;i<GT.length;i++)GT[i]=gauss();gseed=2463534242;}
+function gr(){gseed^=gseed<<13;gseed^=gseed>>>17;gseed^=gseed<<5;return GT[(gseed>>>0)&16383];}
+function areaBelow(s,r){if(s<=-r)return 0;if(s>=r)return PI*r*r;return PI*r*r-r*r*Math.acos(s/r)+s*Math.sqrt(r*r-s*s);}
+
+/* ---------------- simulation state ---------------- */
+const SIM={dref:0.01,dmin:0.01,dmax:0.01,d1:0,d2:0,grad:'uniform',dt:5e-5,t:0,stepNo:0,phase:'idle',settleT:0,
+  knC:0,vth:0,impTh:0,nsub:8,phib:0.82,w:0.01,rmaxAll:0.005,yCeil:1,vmax:0,vmean:1,settleOK:true,bedStable:true,
+  gateX:-1,gateOpen:true,bedX0:0,genWallX:-1,nSleep:0,resizing:false,rmaxRes:0,
+  nextStat:0,statCount:0,started:false,Vin:0,Vout:0,Vdue:0,As0:0,nOut:0,qinNow:0};
+const GEO={xb:[0],zk:[0],th:[0],Lx:1,zMin:0,zMax:1};
+
+/* ---------------- geometry ---------------- */
+function buildGeom(){
+  const d=SIM.dref;let x=0;const xb=[0],th=[];
+  for(const s of P.segs){x+=Math.max(1,s.L)*d;xb.push(x);th.push(s.th);}
+  const dz=P.segs.map(s=>Math.max(1,s.L)*d*Math.tan(s.th*PI/180));
+  const drop=dz.reduce((a,b)=>a+b,0);
+  const zk=[drop+2*d];for(let k=0;k<dz.length;k++)zk.push(zk[k]-dz[k]);
+  GEO.xb=xb;GEO.zk=zk;GEO.th=th;GEO.Lx=x;GEO.zMin=Math.min(...zk);GEO.zMax=Math.max(...zk);
+}
+function segAt(x){const xb=GEO.xb;for(let k=0;k<xb.length-2;k++)if(x<xb[k+1])return k;return xb.length-2;}
+function zfAt(x){const k=segAt(Math.max(0,Math.min(GEO.Lx,x))),xb=GEO.xb,z=GEO.zk;const t=(x-xb[k])/(xb[k+1]-xb[k]);return z[k]+t*(z[k+1]-z[k]);}
+function thAt(x){return GEO.th[segAt(x)];}
+
+/* ---------------- sizes ---------------- */
+function computeSizes(){
+  const mm=1e-3;
+  if(P.grad==='uniform'){SIM.dref=P.d*mm;SIM.dmin=SIM.dmax=SIM.dref;}
+  else if(P.grad==='binary'){let a=Math.min(P.d1,P.d2),b=Math.max(P.d1,P.d2);if(b/a>5)a=b/5;
+    SIM.d1=a*mm;SIM.d2=b*mm;SIM.dref=(P.p2*b+(1-P.p2)*a)*mm;SIM.dmin=a*mm;SIM.dmax=b*mm;}
+  else{const f=Math.min(P.sg*P.sg,Math.sqrt(5));SIM.dref=P.d50*mm;SIM.dmin=SIM.dref/f;SIM.dmax=SIM.dref*f;}
+}
+function sampleD(){
+  if(P.grad==='uniform')return SIM.dref;
+  if(P.grad==='binary'){const a=SIM.d1,b=SIM.d2,p=P.p2;const wa=(1-p)/(a*a*a),wb=p/(b*b*b);return rnd()<wb/(wa+wb)?b:a;}
+  const lo=SIM.dmin,hi=SIM.dmax,ls=Math.log(P.sg);
+  for(let k=0;k<2000;k++){const x=SIM.dref*Math.exp(ls*gauss());if(x<lo||x>hi)continue;const q=lo/x;if(rnd()<q*q*q)return x;}
+  return SIM.dref;
+}
+function classOf(i){if(PFIX[i]===1)return 2;if(SIM.grad==='uniform')return 0;const d=2*PR0[i];
+  if(SIM.grad==='binary')return d>Math.sqrt(SIM.d1*SIM.d2)?1:0;return d>=SIM.dref?1:0;}
+
+/* ---------------- particle storage ---------------- */
+let cap=0,N=0,FOC=-1,nextPID=1;
+let PX,PY,PVX,PVY,POM,PFX,PFY,PTQ,PR,PM,PIN,PSPD,PFS,PDB,PUT,PVT,PFIX,PXR,PYR,PTR,PR0,PID,POUT,NEXT;
+function arrs(){return [PX,PY,PVX,PVY,POM,PFX,PFY,PTQ,PR,PM,PIN,PSPD,PFS,PDB,PUT,PVT,PFIX,PXR,PYR,PTR,PR0,PID,POUT];}
+function ensure(n){
+  if(n<=cap)return;const nc=Math.max(n,cap*2,2048);
+  const g=(a,T)=>{const b=new T(nc);if(a)b.set(a.subarray(0,N));return b;};
+  PX=g(PX,Float64Array);PY=g(PY,Float64Array);PVX=g(PVX,Float64Array);PVY=g(PVY,Float64Array);POM=g(POM,Float64Array);
+  PFX=g(PFX,Float64Array);PFY=g(PFY,Float64Array);PTQ=g(PTQ,Float64Array);PR=g(PR,Float64Array);PM=g(PM,Float64Array);
+  PIN=g(PIN,Float64Array);PSPD=g(PSPD,Float64Array);PFS=g(PFS,Float64Array);PDB=g(PDB,Float64Array);
+  PUT=g(PUT,Float64Array);PVT=g(PVT,Float64Array);PXR=g(PXR,Float64Array);PYR=g(PYR,Float64Array);
+  PTR=g(PTR,Float64Array);PR0=g(PR0,Float64Array);PFIX=g(PFIX,Uint8Array);PID=g(PID,Int32Array);POUT=g(POUT,Uint8Array);
+  NEXT=new Int32Array(nc);cap=nc;
+}
+function setMass(i){const r=PR[i];PM[i]=P.sigma*V43*r*r*r;PIN[i]=0.4*PM[i]*r*r;}
+function addP(x,y,r,fix){ensure(N+1);const i=N++;PX[i]=x;PY[i]=y;PVX[i]=0;PVY[i]=0;POM[i]=0;PR[i]=r;PTR[i]=r;PR0[i]=r;setMass(i);
+  PFIX[i]=fix;PSPD[i]=0;PXR[i]=x;PYR[i]=y;PFS[i]=0;PDB[i]=0;PUT[i]=0;PVT[i]=0;PFX[i]=0;PFY[i]=0;PTQ[i]=0;PID[i]=nextPID++;POUT[i]=0;return i;}
+// 接触履歴は粒子番号（PID）で管理するので、粒子を除いても他の接触の履歴は保たれる
+function removeP(k){const l=N-1;if(k!==l){for(const a of arrs())a[k]=a[l];}if(FOC===l)FOC=k;else if(FOC===k)FOC=-1;N--;}
+const CM=new Map();
+
+/* ---------------- focus-particle records ---------------- */
+const TSC=1600,TS={};for(const k of ['t','fdx','fdy','fl','fb','fbx','fcx','fcy','nc','vx','vy','x','y','p','q','wp','al'])TS[k]=new Float64Array(TSC);
+let tsHead=0,tsCount=0;
+const FR={fdx:0,fdy:0,fl:0,fb:0,fbx:0,cx:0,cy:0,nc:0,nslip:0,mob:0,sxx:0,syy:0,sxy:0};
+const FA={n:0,fdx:0,fdy:0,fl:0,fb:0,fbx:0,cx:0,cy:0,nc:0,p:0,q:0};
+const FCo=new Int32Array(48),FCfn=new Float64Array(48),FCmob=new Float64Array(48);let FCn=0;
+const IMP=[];
+let CHi=new Int32Array(8192),CHj=new Int32Array(8192),CHf=new Float32Array(8192),nCH=0,REC=false;
+
+/* ---------------- fluid columns ---------------- */
+const FL={nx:0,K:0,dx:0.01,dz:0.0025,y0:0,kb:null,
+  U:null,phiA:null,Bs:null,Ss:null,PVs:null,phiv:null,eps:null,Bv:null,Sv:null,
+  W:null,eta:null,Q:null,Qs:null,Ucol:null,zb:null,zb0:null,zf:null,Sb:null,Se:null,us:null,h:null,
+  As:null,Am:null,qs:null,Cb:null,Csum:null,F:null,
+  sC:null,lm:null,Df:null,aa:null,bb:null,cc:null,dd:null,un:null};
+function allocFluid(){
+  const d=SIM.dref,dx=d,dz=d/4;
+  const nx=Math.max(4,Math.ceil(GEO.Lx/dx));
+  const y0=GEO.zMin-d,ytop=GEO.zMax+Math.max(P.Hb,P.mode==='surge'?P.Hres:0)*d+45*d;
+  const K=Math.ceil((ytop-y0)/dz);
+  Object.assign(FL,{nx,K,dx,dz,y0});
+  const n=nx*K,f=()=>new Float64Array(n),c=()=>new Float64Array(nx);
+  FL.U=f();FL.phiA=f();FL.Bs=f();FL.Ss=f();FL.PVs=f();FL.phiv=f();FL.eps=f();FL.Bv=f();FL.Sv=f();FL.upE=f();
+  FL.eps.fill(1);
+  for(const k of ['W','eta','Q','Qs','Ucol','zb','zb0','zf','Sb','Se','SeS','us','h','As','Am','qs','Cb','Csum','As0','dzb'])FL[k]=c();
+  FL.F=new Float64Array(nx+1);FL.kb=new Int32Array(nx);
+  for(let j=0;j<nx;j++){const x=(j+0.5)*dx;FL.zf[j]=zfAt(x);FL.kb[j]=Math.max(0,Math.floor((FL.zf[j]-y0)/dz));}
+  const m=()=>new Float64Array(K);FL.sC=m();FL.lm=m();FL.Df=m();FL.aa=m();FL.bb=m();FL.cc=m();FL.dd=m();FL.un=m();FL.ps=m();
+}
+function colOf(x){let j=Math.floor(x/FL.dx);return j<0?0:j>=FL.nx?FL.nx-1:j;}
+// 河床は常に飽和（空隙は水で満ちている）とみなし、水の収支は河床面 z_b より上の表面水の体積 W だけで追跡する。
+// W から水面 η を求める（z_b から上へ空隙率 ε を積分）
+function etaFromW(j){const K=FL.K,b=j*K,dz=FL.dz,y0=FL.y0,zb=FL.zb[j];let V=FL.W[j];if(V<=0)return zb;
+  let k=Math.max(FL.kb[j],Math.floor((zb-y0)/dz));let y=zb;
+  for(;k<K;k++){const top=y0+(k+1)*dz,e=FL.eps[b+k],cap=e*(top-y);if(cap>=V)return y+V/e;V-=cap;y=top;}
+  return y0+K*dz;}
+// 位置 (x, y) の流体の状態（柱の中心間で x 方向に線形補間）
+const FS={u:0,v:0,eta:0,Se:0,Sb:0,us:0,phi:0,zb:0,h:0};
+function colU(j,y){const K=FL.K,dz=FL.dz;let kf=(y-FL.y0)/dz-0.5;const kb=FL.kb[j];
+  if(kf<=kb)return 0;let k0=kf|0;if(k0>=K-1)return FL.U[j*K+K-1];const t=kf-k0;return FL.U[j*K+k0]*(1-t)+FL.U[j*K+k0+1]*t;}
+function fluidAt(x,y){
+  const nx=FL.nx;let fx=x/FL.dx-0.5,j0=Math.floor(fx),t=fx-j0;if(j0<0){j0=0;t=0;}if(j0>=nx-1){j0=nx-2;t=1;}const j1=j0+1;
+  FS.eta=FL.eta[j0]*(1-t)+FL.eta[j1]*t;FS.zb=FL.zb[j0]*(1-t)+FL.zb[j1]*t;
+  FS.Se=FL.SeS[j0]*(1-t)+FL.SeS[j1]*t;FS.Sb=FL.Sb[j0]*(1-t)+FL.Sb[j1]*t;FS.us=FL.us[j0]*(1-t)+FL.us[j1]*t;
+  FS.h=Math.max(0,FS.eta-FS.zb);
+  FS.u=colU(j0,y)*(1-t)+colU(j1,y)*t;
+  // 流れの向き：河床付近は河床勾配、水面付近は水面勾配に沿う
+  const xi=FS.h>1e-6?Math.max(0,Math.min(1,(y-FS.zb)/FS.h)):0;FS.v=FS.u*((1-xi)*FS.Sb+xi*FS.Se);
+  let k=Math.floor((y-FL.y0)/FL.dz);if(k<0)k=0;else if(k>=FL.K)k=FL.K-1;
+  FS.phi=FL.phiv[j0*FL.K+k]*(1-t)+FL.phiv[j1*FL.K+k]*t;
+  return FS;
+}
+
+/* ---------------- generation ---------------- */
+// 逐次堆積（Visscher–Bolsterli 型、非周期）：鉛直に落とし、接した粒子の上を低い側へ転がして2点支持で止める。xmin/xmax は壁
+function depositRoll(x0,r,bins,bw,nbin,rmaxAll,xmin,xmax){
+  const near=(x,reach)=>{const out=[],nb=Math.ceil(reach/bw),b0=Math.floor(x/bw);
+    for(let k=b0-nb;k<=b0+nb;k++){if(k<0||k>=nbin)continue;const lst=bins[k];for(let m=lst.length-1,c=0;m>=0&&c<14;m--,c++)out.push(lst[m]);}return out;};
+  const lo=xmin+r,hi=xmax-r;
+  const drop=x=>{let y=zfAt(x)+r,sj=-1;for(const j of near(x,r+rmaxAll)){const dx=PX[j]-x,rs=r+PR[j];if(Math.abs(dx)<rs){const yy=PY[j]+Math.sqrt(rs*rs-dx*dx);if(yy>y){y=yy;sj=j;}}}return [y,sj];};
+  let x=Math.max(lo,Math.min(hi,x0)),[y,j]=drop(x);
+  for(let it=0;it<14&&j>=0;it++){
+    const Rj=r+PR[j],ax=x-PX[j],ay=y-PY[j],a0=Math.atan2(ay,ax),s=ax>=0?1:-1,aEnd=s>0?0:PI;
+    let best=-1,bt=Infinity,bx=0,by=0;
+    for(const k of near(PX[j],Rj+r+rmaxAll)){if(k===j)continue;
+      const dx=PX[k]-PX[j],dy=PY[k]-PY[j],Rk=r+PR[k],Dd=Math.hypot(dx,dy);if(Dd>=Rj+Rk||Dd<=Math.abs(Rj-Rk)||Dd<1e-12)continue;
+      const aa=(Rj*Rj-Rk*Rk+Dd*Dd)/(2*Dd),hh=Math.sqrt(Math.max(0,Rj*Rj-aa*aa)),mx=PX[j]+aa*dx/Dd,my=PY[j]+aa*dy/Dd;
+      for(const sg of [1,-1]){const px=mx-sg*hh*dy/Dd,py=my+sg*hh*dx/Dd,ap=Math.atan2(py-PY[j],px-PX[j]);const tr=s>0?a0-ap:ap-a0;
+        if(tr>1e-9&&(s>0?ap>=aEnd-1e-9:ap<=aEnd+1e-9)&&tr<bt){bt=tr;best=k;bx=px;by=py;}}}
+    // 壁に当たる位置で止める
+    const wallX=s>0?hi:lo;
+    if(best<0||(s>0?bx>hi:bx<lo)){
+      if(Math.abs(wallX-PX[j])<Rj&&(s>0?PX[j]+Rj>hi:PX[j]-Rj<lo)){x=wallX;y=PY[j]+Math.sqrt(Rj*Rj-(x-PX[j])**2);
+        if(y<zfAt(x)+r)y=zfAt(x)+r;break;}
+      if(best<0){x=Math.max(lo,Math.min(hi,PX[j]+s*(Rj+1e-6)));const dd=drop(x);y=dd[0];j=dd[1];continue;}
+    }
+    if(by<zfAt(bx)+r){const dd=drop(x);y=dd[0];j=dd[1];break;}
+    x=bx;y=by;
+    if((PX[j]-x)*(PX[best]-x)<=0)break;
+    j=best;
+  }
+  return [x,y];
+}
+// 堆積の目標上端：水路全体に厚さ H_b の河床（移動床の開始位置より上流は固定床になる）、段波の貯留区間ではその上に高さ H_res の土砂
+function targetTop(x){
+  const d=SIM.dref;let t=P.Hb>0?zfAt(x)+P.Hb*d:-Infinity;
+  if(SIM.gateX>0&&x<SIM.gateX)t=zfAt(x)+P.Hb*d+P.Hres*d;
+  return t;
+}
+function regenerate(){
+  rngSeed(P.seed);fillGT();derive();computeSizes();SIM.grad=P.grad;buildGeom();
+  const d=SIM.dref,Lx=GEO.Lx;
+  N=0;CM.clear();FOC=-1;ensure(4096);IMP.length=0;nextPID=1;
+  SIM.gateX=P.mode==='surge'?Math.min(P.Lres,0.6*Lx/d)*d:-1;SIM.gateOpen=SIM.gateX<0;
+  SIM.bedX0=Math.max(P.bedFrom*d,SIM.gateX>0?SIM.gateX:0);
+  SIM.genWallX=-1;
+  // 固定床：粒径 0.6〜1.0d、間隔 1.3d、高さにばらつきを持たせた粗い粒子列を折れ線に沿って置く
+  const nb=Math.max(3,Math.round(Lx/(1.3*d))),sp=Lx/nb;
+  for(let k=0;k<nb;k++){const rb=d*(0.3+0.2*rnd()),x=(k+0.5)*sp+(rnd()-0.5)*0.2*d;addP(x,zfAt(x)+rb+rnd()*0.3*d,rb,1);}
+  // 堆積させる粒子の総面積
+  let A=0;const nx=Math.ceil(Lx/(0.25*d));
+  for(let k=0;k<nx;k++){const x=(k+0.5)*Lx/nx,t=targetTop(x);if(t>-1e9)A+=Math.max(0,t-zfAt(x)-0.8*d)*(Lx/nx);}
+  A*=0.84;const ds=[];let a=0;while(a<A){const dd=sampleD();ds.push(dd);a+=PI*dd*dd/4;}
+  for(let i=ds.length-1;i>0;i--){const j=(rnd()*(i+1))|0;const t=ds[i];ds[i]=ds[j];ds[j]=t;}
+  const bw=0.5*d,nbin=Math.ceil(Lx/bw)+1,bins=[];for(let b=0;b<nbin;b++)bins.push([]);
+  const put=i=>{let b=Math.floor(PX[i]/bw);if(b<0)b=0;if(b>=nbin)b=nbin-1;bins[b].push(i);};
+  for(let i=0;i<N;i++)put(i);
+  let rmaxAll=0;for(const dd of ds)rmaxAll=Math.max(rmaxAll,dd/2);for(let i=0;i<N;i++)rmaxAll=Math.max(rmaxAll,PR[i]);
+  SIM.rmaxAll=Math.max(rmaxAll,SIM.dmax/2);
+  const xStart=0;
+  let idx=0,ytop=GEO.zMax;
+  for(let pass=0;pass<600&&idx<ds.length;pass++){
+    let placed=0,x=xStart+rnd()*d,rPrev=0;
+    while(x<Lx&&idx<ds.length){
+      const r=ds[idx]/2;x+=rPrev+r+rnd()*0.15*d;rPrev=r;if(x>=Lx)break;
+      const tt=targetTop(x);if(tt<-1e9){continue;}
+      const inRes=SIM.gateX>0&&x<SIM.gateX;
+      const xmin=inRes?0:(SIM.gateX>0?SIM.gateX:0),xmax=inRes?SIM.gateX:Lx;
+      const pos=depositRoll(x,r,bins,bw,nbin,rmaxAll,xmin,xmax);
+      const t2=targetTop(pos[0]);
+      if(t2<-1e9||pos[1]+r>t2+0.35*r)continue;
+      const i=addP(pos[0],pos[1]+1e-4*d,r,0);put(i);idx++;placed++;if(pos[1]+r>ytop)ytop=pos[1]+r;
+    }
+    if(!placed)break;
+  }
+  SIM.yCeil=ytop+50*d;
+  const mref=P.sigma*PI*d*d*d/6,tc=0.045*Math.sqrt(d/G);
+  SIM.knC=(mref/2)*PI*PI/(tc*tc)/(d*d);
+  SIM.vth=0.02*Math.sqrt(G*d);SIM.impTh=0.05*Math.sqrt(G*d);
+  allocFluid();
+  SIM.resizing=false;SIM.rmaxRes=0;SIM.nSleep=0;SIM.vmean=1;computeDt();
+  SIM.phase='settle';SIM.settleT=0;SIM.t=0;SIM.stepNo=0;SIM.started=false;
+  SIM.Vin=0;SIM.Vout=0;SIM.Vdue=0;SIM.nOut=0;SIM.pendD=0;SIM.VinC=0;SIM.VinW=0;SIM.Uin=0;SIM.hin=0;SIM.xFeed=0;
+  resetRecords();tsHead=0;tsCount=0;
+}
+function computeDt(){
+  let d=SIM.dmin;for(let i=0;i<N;i++){if(i===FOC||PR[i]!==PTR[i]){const m=2*Math.min(PR[i],PTR[i]);if(m<d)d=m;}}
+  const m=P.sigma*PI*d*d*d/6,kn=SIM.knC*d*d;SIM.dt=PI*Math.sqrt(0.5*m/kn)/20;
+}
+function finishSettle(){
+  const d=SIM.dref,Lx=GEO.Lx;
+  // 底部 1.6d と、移動床の上流端・下流端の 1.2d を固定（床固め）
+  // 固定：底部 1.6d、移動床の開始位置より上流の河床（固定床区間。貯留区間では貯留土砂の下の河床）、下流端 1.2d（床固め）
+  for(let i=0;i<N;i++){if(PFIX[i]!==0)continue;const x=PX[i],y=PY[i],zf=zfAt(x);
+    const inRes=SIM.gateX>0&&x<SIM.gateX;
+    if(y<zf+1.6*d)PFIX[i]=1;
+    else if(inRes){if(y<zf+P.Hb*d)PFIX[i]=1;}
+    else if(x<SIM.bedX0||x>Lx-1.2*d)PFIX[i]=1;
+    PVX[i]=PVY[i]=POM[i]=0;}
+  SIM.genWallX=-1;
+  CM.clear();SIM.phase='relax';SIM.settleT=0;derive();
+}
+function finishRelax(){
+  const d=SIM.dref,dx=FL.dx,nx=FL.nx;
+  SIM.bedStable=SIM.vmean<0.002;
+  for(let i=0;i<N;i++){PVX[i]=PVY[i]=POM[i]=0;PSPD[i]=0;PXR[i]=PX[i];PYR[i]=PY[i];}
+  // 河床の面積充填率 φ_b：移動床区間の柱で、粒子の最上端までの面積に対する粒子面積
+  const top=new Float64Array(nx),Aj=new Float64Array(nx);
+  for(let i=0;i<N;i++){const j=colOf(PX[i]);const tp=PY[i]+PR[i];if(tp>top[j])top[j]=tp;Aj[j]+=PI*PR[i]*PR[i];}
+  let Ab=0,Vb=0;for(let j=0;j<nx;j++){const x=(j+0.5)*dx;if(P.Hb>0&&x>SIM.bedX0+4*d&&x<GEO.Lx-4*d){Ab+=Aj[j];Vb+=(top[j]-FL.zf[j])*dx;}}
+  SIM.phib=Vb>0?Math.min(0.9,Math.max(0.6,Ab/Vb)):0.82;
+  SIM.w=(2*d/3)*SIM.phib/P.Cstar;
+  coupling();
+  // 河床面の初期値と、水の初期条件（飽和なら河床面まで空隙を満たす。段波では貯留土砂の上端まで）
+  bedStats(true);
+  for(let j=0;j<nx;j++){FL.zb0[j]=FL.zb[j];FL.As0[j]=FL.As[j];
+    const x=(j+0.5)*dx,inRes=SIM.gateX>0&&x<SIM.gateX;
+    FL.W[j]=inRes?P.Wres*d:0;FL.eta[j]=etaFromW(j);}
+  SIM.As0=FL.As.reduce((a,b)=>a+b,0);
+  if(P.fdepth>=0)placeFocusAt(P.xs*d,P.fdepth,P.df/1000);
+  SIM.phase='run';SIM.t=0;SIM.nextStat=0;SIM.gateOpen=true;SIM.started=true;SIM.statCount=0;
+  FL.U.fill(0);
+}
+
+/* ---------------- contact ---------------- */
+let HEAD=new Int32Array(64),GNX=1,GNY=1,GCS=1;
+function buildGrid(){
+  const rmax=Math.max(SIM.rmaxAll,FOC>=0?Math.max(PR[FOC],PTR[FOC]):0,SIM.resizing?SIM.rmaxRes:0);
+  GCS=2*rmax;GNX=Math.max(1,Math.ceil(GEO.Lx/GCS)+2);
+  const y0=FL.y0;GNY=Math.max(1,Math.ceil((SIM.yCeil-y0)/GCS)+1);
+  const nc=GNX*GNY;if(HEAD.length<nc)HEAD=new Int32Array(nc*2);HEAD.fill(-1,0,nc);
+  const ic=1/GCS;
+  for(let i=0;i<N;i++){let cx=((PX[i]*ic)|0)+1;if(cx<0)cx=0;else if(cx>=GNX)cx=GNX-1;
+    let cy=((PY[i]-y0)*ic)|0;if(cy<0)cy=0;else if(cy>=GNY)cy=GNY-1;const c=cy*GNX+cx;NEXT[i]=HEAD[c];HEAD[c]=i;}
+}
+function pair(i,j){
+  if(i>j){const t=i;i=j;j=t;}
+  const fi=PFIX[i],fj=PFIX[j];
+  if(fi&&fj&&fi!==2&&fj!==2)return;
+  const dx=PX[j]-PX[i],dy=PY[j]-PY[i],ri=PR[i],rj=PR[j],rs=ri+rj,d2=dx*dx+dy*dy;
+  if(d2>=rs*rs)return;
+  const dist=Math.sqrt(d2)||1e-12,nx=dx/dist,ny=dy/dist,del=rs-dist,tx=-ny,ty=nx;
+  const rvx=PVX[j]-PVX[i],rvy=PVY[j]-PVY[i];
+  const vn=rvx*nx+rvy*ny,vt=rvx*tx+rvy*ty-POM[i]*ri-POM[j]*rj;
+  const meff=fi?PM[j]:(fj?PM[i]:PM[i]*PM[j]/(PM[i]+PM[j]));
+  const deff=4*ri*rj/rs,kn=SIM.knC*deff*deff;
+  let fn=kn*del-2*D.zeta*Math.sqrt(meff*kn)*vn;if(fn<0)fn=0;
+  const a=PID[i],b=PID[j],key=a<b?a*2097152+b:b*2097152+a,step=SIM.stepNo;
+  let c=CM.get(key),fresh=false;
+  if(c===undefined){c={xi:0,th:0,st:step};CM.set(key,c);fresh=true;}else if(c.st<step-1){c.xi=0;c.th=0;fresh=true;}
+  // 接線方向のずれ ξ は i と j を入れ替えても不変。転がりのずれ θ は入れ替えで符号が反転するので PID の順に揃えて保存する
+  const sg=a<b?1:-1;
+  c.st=step;c.xi+=vt*SIM.dt;
+  const kt=kn*0.2857;let ft=-kt*c.xi;const fmax=P.mu*fn;
+  if(ft>fmax){ft=fmax;c.xi=-ft/kt;}else if(ft<-fmax){ft=-fmax;c.xi=-ft/kt;}
+  const Fx=fn*nx+ft*tx,Fy=fn*ny+ft*ty;
+  PFX[j]+=Fx;PFY[j]+=Fy;PFX[i]-=Fx;PFY[i]-=Fy;
+  PTQ[i]-=ri*ft;PTQ[j]-=rj*ft;
+  if(P.mur>0&&fn>0){
+    const wr=POM[i]-POM[j],Rr=ri*rj/rs,kr=2.25*kn*P.mur*P.mur*Rr*Rr,Mm=P.mur*Rr*fn;
+    c.th+=sg*wr*SIM.dt;let Mr=kr*c.th*sg;
+    if(Mr>Mm){Mr=Mm;c.th=Mm/kr*sg;}else if(Mr<-Mm){Mr=-Mm;c.th=-Mm/kr*sg;}
+    else{const Ii=PIN[i]+PM[i]*ri*ri,Ij=PIN[j]+PM[j]*rj*rj,Ir=fi?Ij:(fj?Ii:Ii*Ij/(Ii+Ij));Mr+=0.6*Math.sqrt(Ir*kr)*wr;}
+    PTQ[i]-=Mr;PTQ[j]+=Mr;}
+  if(i===FOC||j===FOC){
+    const isI=i===FOC,o=isI?j:i,fxF=isI?-Fx:Fx,fyF=isI?-Fy:Fy,rf=isI?ri:rj,ux=isI?nx:-nx,uy=isI?ny:-ny;
+    const cpx=rf*ux,cpy=rf*uy;
+    FR.cx+=fxF;FR.cy+=fyF;FR.nc++;
+    FR.sxx-=cpx*fxF;FR.syy-=cpy*fyF;FR.sxy-=0.5*(cpx*fyF+cpy*fxF);
+    const mob=fmax>0?Math.abs(ft)/fmax:0;if(mob>FR.mob)FR.mob=mob;if(mob>0.999&&fn>0)FR.nslip++;
+    if(FCn<48){FCo[FCn]=o;FCfn[FCn]=fn;FCmob[FCn]=mob;FCn++;}
+    if(fresh&&-vn>SIM.impTh&&SIM.phase==='run'){IMP.push(SIM.t,-vn);if(IMP.length>400)IMP.splice(0,2);}
+  }
+  if(REC&&fn>0){if(nCH>=CHi.length){const n2=CHi.length*2;const A=new Int32Array(n2),B=new Int32Array(n2),F=new Float32Array(n2);A.set(CHi);B.set(CHj);F.set(CHf);CHi=A;CHj=B;CHf=F;}
+    CHi[nCH]=i;CHj[nCH]=j;CHf[nCH]=fn;nCH++;}
+}
+// 鉛直の壁（上流端 x=0、段波のゲート、生成中の移動床上流端）
+function wallForce(i,xw,side){
+  const r=PR[i],gap=side>0?PX[i]-xw:xw-PX[i],del=r-gap;if(del<=0)return;
+  const kn=SIM.knC*4*r*r,vn=side>0?PVX[i]:-PVX[i];
+  let f=kn*del-2*D.zeta*Math.sqrt(PM[i]*kn)*vn;if(f<0)f=0;PFX[i]+=side>0?f:-f;
+}
+
+// 固定床の折れ線を壁として扱う（線分への最近点で法線力。底面の粒子列のすき間から細粒が抜け落ちないように）
+function floorForce(i){
+  const r=PR[i],x=PX[i],y=PY[i],xb=GEO.xb,zk=GEO.zk,ns=xb.length-1;
+  for(let k=0;k<ns;k++){
+    if(x+r<xb[k]||x-r>xb[k+1])continue;
+    const ax=xb[k],ay=zk[k],bx=xb[k+1],by=zk[k+1],ex=bx-ax,ey=by-ay,L2=ex*ex+ey*ey;
+    let t=((x-ax)*ex+(y-ay)*ey)/L2;t=t<0?0:t>1?1:t;
+    const cx=ax+t*ex,cy=ay+t*ey;let nx=x-cx,ny=y-cy;let dist=Math.sqrt(nx*nx+ny*ny);
+    // 線分の下側にいる場合も上向きに押し戻す
+    const below=(ex*(y-ay)-ey*(x-ax))<0;
+    if(dist<1e-12){nx=-ey;ny=ex;dist=0;}else{nx/=dist;ny/=dist;}
+    if(below){nx=-nx;ny=-ny;dist=-dist;}
+    const del=r-dist;if(del<=0)continue;
+    const kn=SIM.knC*4*r*r,vn=PVX[i]*nx+PVY[i]*ny;
+    let f=kn*Math.min(del,r)-2*D.zeta*Math.sqrt(PM[i]*kn)*vn;if(f<0)f=0;
+    PFX[i]+=f*nx;PFY[i]+=f*ny;
+  }
+}
+
+/* ---------------- fluid force on a particle ---------------- */
+function fluidForce(i,apply,isF){
+  const r=PR[i],x=PX[i],yi=PY[i];
+  const S=fluidAt(x,yi),eta=S.eta;
+  if(yi-r>=eta){PFS[i]=0;PDB[i]=0;PUT[i]=0;PVT[i]=0;if(isF){FR.fdx=FR.fdy=FR.fl=FR.fb=FR.fbx=0;}return;}
+  const fs=(yi+r<=eta)?1:areaBelow(eta-yi,r)/(PI*r*r);
+  PFS[i]=fs;
+  const ph=S.phi,ep=Math.max(0.3,1-ph);
+  let ut=0,vt=0;
+  if(apply&&P.turb&&S.us>1e-5&&S.h>0.2*SIM.dref){
+    const dmp=1-ph/P.Cstar;
+    if(dmp>0){const zr=Math.max(0,yi-S.zb);const ex=Math.exp(-zr/S.h)*dmp*S.us;
+      let TL=0.5*(zr+SIM.dref)/S.us;const dt=SIM.dt;if(TL>1)TL=1;if(TL<5*dt)TL=5*dt;
+      const a=Math.exp(-dt/TL),b=Math.sqrt(1-a*a);
+      PUT[i]=PUT[i]*a+2.3*ex*b*gr();PVT[i]=PVT[i]*a+1.27*ex*b*gr();ut=PUT[i];vt=PVT[i];
+    }else{PUT[i]=0;PVT[i]=0;}
+  }
+  const uc=S.u+ut,vc=S.v+vt,Se=S.Se;
+  const uT=colInterp(x,Math.min(yi+r,eta))+ut,uB=colInterp(x,yi-r)+ut;
+  const vx=PVX[i],vy=PVY[i];
+  const rx=uc-vx,ry=vc-vy,rm=Math.sqrt(rx*rx+ry*ry)+1e-12;
+  const Re=rm*2*r/NU,sq=0.63+4.8/Math.sqrt(Re),Cd=sq*sq;
+  const lg=1.5-0.4342945*Math.log(Re),chi=3.7-0.65*Math.exp(-0.5*lg*lg);
+  const hind=Math.exp((2-chi)*Math.log(ep)),Ap=PI*r*r;
+  const bet=0.5*P.rho*Cd*Ap*hind*rm*fs;
+  PDB[i]=bet;
+  if(!apply&&!isF)return;
+  const fdx=bet*rx,fdy=bet*ry,aT=uT-vx,aB=uB-vx;
+  const fl=0.5*P.rho*P.CL*Ap*(aT*Math.abs(aT)-aB*Math.abs(aB))*fs;
+  // 静水圧の勾配による力：鉛直に浮力 ρVg、水平に −ρVg ∂η/∂x
+  const Vs=V43*r*r*r*fs,fb=P.rho*Vs*G,fbx=-P.rho*Vs*G*Se;
+  if(apply){PFX[i]+=fdx+fbx;PFY[i]+=fdy+fl+fb;}
+  if(isF){FR.fdx=fdx;FR.fdy=fdy;FR.fl=fl;FR.fb=fb;FR.fbx=fbx;}
+}
+function colInterp(x,y){const nx=FL.nx;let fx=x/FL.dx-0.5,j0=Math.floor(fx),t=fx-j0;if(j0<0){j0=0;t=0;}if(j0>=nx-1){j0=nx-2;t=1;}
+  return colU(j0,y)*(1-t)+colU(j0+1,y)*t;}
+
+/* ---------------- forces & integration ---------------- */
+function forces(){
+  // 生成中（settle/relax）も、流れ開始後の飽和河床と同じ力のつり合いにする：
+  //   鉛直は水中重量 (σ−ρ)Vg、水平は河床面に平行な浸透流による ρVg tanθ（下流向き）
+  const run=SIM.phase==='run',f=FOC,betaStep=(SIM.stepNo+1)%SIM.nsub===0,bf=run?1:1-P.rho/P.sigma;
+  for(let i=0;i<N;i++){PTQ[i]=0;const fx=PFIX[i];
+    if(fx===1||fx===3){PFX[i]=0;PFY[i]=0;}
+    else{PFY[i]=-PM[i]*G*bf;PFX[i]=run?0:P.rho*V43*PR[i]*PR[i]*PR[i]*G*Math.tan(thAt(PX[i])*PI/180);}
+    if(run){if(fx===3){if(betaStep)fluidForce(i,false,false);}else fluidForce(i,fx!==1,i===f);}else{PFS[i]=0;PDB[i]=0;}
+    if(fx===0||fx===2){
+      wallForce(i,0,1);floorForce(i);
+      if(SIM.gateX>0&&!SIM.gateOpen){if(PX[i]<SIM.gateX)wallForce(i,SIM.gateX,-1);else wallForce(i,SIM.gateX,1);}
+      if(SIM.genWallX>0&&PX[i]>SIM.genWallX)wallForce(i,SIM.genWallX,1);
+      if(SIM.phase!=='run')wallForce(i,GEO.Lx,-1);
+    }}
+  if(f>=0){FR.wx=0;FR.wy=-PM[f]*G;}
+  buildGrid();
+  const H=HEAD,nxC=GNX,nyC=GNY;
+  for(let cy=0;cy<nyC;cy++){const up=cy+1<nyC;
+    for(let cx=0;cx<nxC;cx++){const c=cy*nxC+cx;let i=H[c];if(i<0)continue;
+      const hasR=cx+1<nxC,hasL=cx>0;
+      const cr=hasR?c+1:-1,cul=up&&hasL?c+nxC-1:-1,cu=up?c+nxC:-1,cur=up&&hasR?c+nxC+1:-1;
+      for(;i>=0;i=NEXT[i]){
+        for(let j=NEXT[i];j>=0;j=NEXT[j])pair(i,j);
+        if(cr>=0)for(let j=H[cr];j>=0;j=NEXT[j])pair(i,j);
+        if(cul>=0)for(let j=H[cul];j>=0;j=NEXT[j])pair(i,j);
+        if(cu>=0)for(let j=H[cu];j>=0;j=NEXT[j])pair(i,j);
+        if(cur>=0)for(let j=H[cur];j>=0;j=NEXT[j])pair(i,j);
+      }}}
+}
+function integrate(){
+  const dt=SIM.dt,run=SIM.phase==='run',Lx=GEO.Lx;
+  const ld=SIM.phase==='relax'?0.7:0,dmp=SIM.phase==='settle'?Math.max(0,1-dt/0.03):1,yc=SIM.yCeil,am=run?0.5*P.rho*V43:0;
+  let vmax=0,vsum=0,nm=0;
+  for(let i=0;i<N;i++){
+    if(PFIX[i])continue;
+    const r=PR[i],me=PM[i]+am*r*r*r*PFS[i];
+    let fx=PFX[i],fy=PFY[i],tq=PTQ[i];
+    if(ld){const a=PVX[i],b=PVY[i],c=POM[i];fx-=ld*Math.abs(fx)*(a>0?1:a<0?-1:0);fy-=ld*Math.abs(fy)*(b>0?1:b<0?-1:0);tq-=ld*Math.abs(tq)*(c>0?1:c<0?-1:0);}
+    let vx=(PVX[i]+fx/me*dt)*dmp,vy=(PVY[i]+fy/me*dt)*dmp,w=(POM[i]+tq/PIN[i]*dt)*dmp;
+    if(!(vx===vx)||!(vy===vy)||!(w===w)){vx=0;vy=0;w=0;POUT[i]=1;}
+    PX[i]+=vx*dt;let y=PY[i]+vy*dt;if(y>yc){y=yc;if(vy>0)vy=-0.5*vy;}PY[i]=y;
+    PVX[i]=vx;PVY[i]=vy;POM[i]=w;
+    if(run&&PX[i]>Lx+PR[i])POUT[i]=1;
+    const sp=vx*vx+vy*vy;if(sp>vmax)vmax=sp;if(!run){vsum+=Math.sqrt(sp);nm++;}
+  }
+  SIM.vmax=Math.sqrt(vmax);if(!run)SIM.vmean=nm?vsum/nm:0;
+}
+function growAll(){
+  if(!SIM.resizing)return;const mx=0.0004*SIM.dref;let any=false,rmx=0;
+  for(let i=0;i<N;i++){const tr=PTR[i],r=PR[i];if(r===tr)continue;any=true;
+    let nr=r+Math.max(-mx,Math.min(mx,tr-r));if(Math.abs(tr-nr)<1e-12)nr=tr;PR[i]=nr;setMass(i);const m=nr>tr?nr:tr;if(m>rmx)rmx=m;}
+  SIM.rmaxRes=rmx;SIM.resizing=any;if(!any||SIM.stepNo%32===0)computeDt();
+}
+
+/* ---------------- fluid–particle coupling ---------------- */
+function coupling(){
+  const K=FL.K,dx=FL.dx,dz=FL.dz,y0=FL.y0,nx=FL.nx;
+  FL.phiA.fill(0);FL.Bs.fill(0);FL.Ss.fill(0);FL.PVs.fill(0);
+  for(let i=0;i<N;i++){
+    const r=PR[i],x=PX[i],y=PY[i],Ap=PI*r*r,db=PDB[i],vx=PVX[i];
+    let ja=Math.floor((x-r)/dx),jb=Math.floor((x+r)/dx);if(jb<0||ja>=nx)continue;if(ja<0)ja=0;if(jb>=nx)jb=nx-1;
+    let k0=Math.floor((y-r-y0)/dz),k1=Math.floor((y+r-y0)/dz);if(k1<0||k0>=K)continue;if(k0<0)k0=0;if(k1>=K)k1=K-1;
+    for(let j=ja;j<=jb;j++){
+      const fx=(Math.min(x+r,(j+1)*dx)-Math.max(x-r,j*dx))/(2*r);if(fx<=0)continue;
+      const b=j*K;let prev=areaBelow(y0+k0*dz-y,r);
+      for(let k=k0;k<=k1;k++){const ab=areaBelow(y0+(k+1)*dz-y,r),wa=(ab-prev)*fx;prev=ab;if(wa<=0)continue;
+        FL.phiA[b+k]+=wa;const fr=wa/Ap;FL.Bs[b+k]+=db*fr;FL.Ss[b+k]+=db*fr*vx;FL.PVs[b+k]+=wa*vx;}
+    }
+  }
+  const cellA=dx*dz,cellV=cellA*SIM.w,sc=P.Cstar/SIM.phib,n=nx*K;
+  for(let c=0;c<n;c++){let pv=FL.phiA[c]/cellA*sc;if(pv>0.95)pv=0.95;FL.phiv[c]=pv;FL.eps[c]=Math.max(0.05,1-pv);
+    FL.Bv[c]=FL.Bs[c]/cellV;FL.Sv[c]=FL.Ss[c]/cellV;
+    const up=FL.phiA[c]>1e-12?FL.PVs[c]/FL.phiA[c]:0;FL.upE[c]+=(up-FL.upE[c])*0.04;}
+}
+// 柱ごとに水面勾配・河床勾配・摩擦速度を更新
+function columnGeom(){
+  const nx=FL.nx,dx=FL.dx;
+  for(let j=0;j<nx;j++){FL.h[j]=Math.max(0,FL.eta[j]-FL.zb[j]);}
+  for(let j=0;j<nx;j++){
+    // 河床勾配：±4柱の最小二乗直線
+    {const jl=Math.max(0,j-4),jr=Math.min(nx-1,j+4);let sx=0,sy=0,sxx=0,sxy=0,n=0;
+      for(let k=jl;k<=jr;k++){const xx=k*dx,yy=FL.zb[k];sx+=xx;sy+=yy;sxx+=xx*xx;sxy+=xx*yy;n++;}
+      FL.Sb[j]=(n*sxy-sx*sy)/Math.max(1e-12,n*sxx-sx*sx);}
+    // 水面勾配：乾いた隣の柱は、その河床面と自分の水面の低い方で置き換える（段差を水が登らないように）
+    const etaN=k=>{if(FL.h[j]>1e-6&&FL.h[k]<=1e-6)return Math.max(FL.eta[k],Math.min(FL.zb[k],FL.eta[j]));return FL.eta[k];};
+    const l=Math.max(0,j-1),r=Math.min(nx-1,j+1);
+    const el=l===j?FL.eta[j]:etaN(l),er=r===j?FL.eta[j]:etaN(r);
+    FL.Se[j]=(er-el)/((r-l)*dx);
+    FL.us[j]=Math.min(3,Math.sqrt(G*FL.h[j]*Math.abs(FL.Se[j])));
+  }
+  // 粒子に加える水平方向の静水圧の力に使う水面勾配：±2柱で平滑化し、|S| ≤ 1 に制限
+  // 表面水のない柱（河床内の地下水だけ）は、地下水面が河床面に沿うとして河床勾配を使う
+  for(let j=0;j<nx;j++){let s=0,n=0;for(let k=Math.max(0,j-3);k<=Math.min(nx-1,j+3);k++){s+=FL.h[k]>0.2*SIM.dref?FL.Se[k]:FL.Sb[k];n++;}FL.SeS[j]=Math.max(-1,Math.min(1,s/n));}
+}
+function solveFluid(dtf){
+  const nx=FL.nx,K=FL.K,dz=FL.dz,dx=FL.dx,y0=FL.y0,rho=P.rho,Cst=P.Cstar;
+  columnGeom();
+  const sC=FL.sC,lm=FL.lm,Df=FL.Df,aa=FL.aa,bb=FL.bb,cc=FL.cc,dd=FL.dd,un=FL.un,ps=FL.ps;
+  // 断面平均流速（移流項用）
+  for(let j=0;j<nx;j++)FL.Ucol[j]=FL.h[j]>0.1*SIM.dref?FL.Qs[j]/FL.h[j]:0;
+  const qin=SIM.qinNow;
+  for(let j=0;j<nx;j++){
+    const b=j*K,kb=FL.kb[j],eta=FL.eta[j];
+    let ke=Math.floor((eta-y0)/dz);if(ke>=K)ke=K-1;
+    // 表面水のない柱（水深 0.05d 未満）は流体を解かない。河床内の浸透流の効果は、粒子に直接かける ρVg tanθ だけで表す
+    if(ke<kb||FL.h[j]<0.05*SIM.dref){for(let k=kb;k<K;k++)FL.U[b+k]=0;FL.Q[j]=0;FL.Qs[j]=0;continue;}
+    // 外力：水面勾配による圧力勾配と、断面平均流速による移流
+    const Uj=FL.Ucol[j];let adv=0;
+    if(FL.h[j]>1e-4){if(Uj>0){const Uu=j>0?FL.Ucol[j-1]:(FL.h[0]>0.1*SIM.dref?qin/FL.h[0]:Uj);adv=Uj*(Uj-Uu)/dx;}
+      else if(j<nx-1)adv=Uj*(FL.Ucol[j+1]-Uj)/dx;}
+    const Gx=-G*FL.Se[j]-adv;
+    // 混合距離：河床面 z_b から (1 − φ̃/C*) を積分、φ̃ は1粒径幅で平滑化
+    const zb=FL.zb[j];let s=0;
+    for(let k=kb;k<=ke;k++){let p=0,np=0;for(let m=k-2;m<=k+2;m++){if(m>=kb&&m<K){p+=FL.phiv[b+m];np++;}}ps[k]=p/np;}
+    for(let k=kb;k<=ke;k++){const z0=y0+k*dz,z1=z0+dz;if(z1<=zb){sC[k]=0;continue;}
+      const wv=Math.max(0,1-ps[k]/Cst),w=z0<zb?(z1-zb):dz;sC[k]=s+0.5*wv*w;s+=wv*w;}
+    const sTop=Math.max(s,1e-9);
+    for(let k=kb;k<=ke;k++)lm[k]=KAPPA*sC[k]*Math.sqrt(Math.max(0,1-sC[k]/sTop));
+    for(let k=kb;k<ke;k++){const g=(FL.U[b+k+1]-FL.U[b+k])/dz,lf=0.5*(lm[k]+lm[k+1]);
+      Df[k]=rho*0.5*(FL.eps[b+k]+FL.eps[b+k+1])*(NU+lf*lf*Math.abs(g))/(dz*dz);}
+    const g0=FL.U[b+kb]/(0.5*dz),D0=rho*FL.eps[b+kb]*(NU+lm[kb]*lm[kb]*Math.abs(g0))/(dz*0.5*dz);
+    for(let k=kb;k<=ke;k++){const am=k>kb?Df[k-1]:D0,ap=k<ke?Df[k]:0,re=rho*FL.eps[b+k];
+      aa[k]=k>kb?-Df[k-1]:0;cc[k]=-ap;bb[k]=re/dtf+FL.Bv[b+k]+am+ap;dd[k]=re*FL.U[b+k]/dtf+re*Gx+FL.Sv[b+k];}
+    for(let k=kb+1;k<=ke;k++){const m=aa[k]/bb[k-1];bb[k]-=m*cc[k-1];dd[k]-=m*dd[k-1];}
+    un[ke]=dd[ke]/bb[ke];for(let k=ke-1;k>=kb;k--)un[k]=(dd[k]-cc[k]*un[k+1])/bb[k];
+    let Q=0,Qs=0;
+    for(let k=kb;k<=ke;k++){let u=un[k];if(u>15)u=15;else if(u<-15)u=-15;FL.U[b+k]=u;
+      const yk=y0+k*dz,fr=k===ke?Math.max(0,Math.min(1,(eta-yk)/dz)):1;const q=FL.eps[b+k]*u*dz*fr;Q+=q;if(yk+dz>zb)Qs+=q*(yk>=zb?1:(yk+dz-zb)/dz);}
+    for(let k=ke+1;k<K;k++)FL.U[b+k]=FL.U[b+ke];
+    // 供給区間（上流端〜x_feed）では、供給中は流速分布を流入流速 U_in の 1/7 乗則にそろえる（流入する水が運動量を持って入る）
+    if(SIM.Uin>0&&(j+0.5)*dx<SIM.xFeed){Q=0;Qs=0;
+      for(let k=kb;k<=ke;k++){const yk=y0+(k+0.5)*dz;if(yk<=zb)continue;const xi=Math.min(1,Math.max(1e-3,(yk-zb)/Math.max(FL.h[j],1e-4)));
+        const u=SIM.Uin*8/7*Math.pow(xi,1/7);FL.U[b+k]=u;}
+      for(let k=kb;k<=ke;k++){const yk=y0+k*dz,u=FL.U[b+k],fr=k===ke?Math.max(0,Math.min(1,(eta-yk)/dz)):1,q=FL.eps[b+k]*u*dz*fr;Q+=q;if(yk+dz>zb)Qs+=q*(yk>=zb?1:(yk+dz-zb)/dz);}
+      for(let k=ke+1;k<K;k++)FL.U[b+k]=FL.U[b+ke];}
+    FL.Q[j]=Q;FL.Qs[j]=Qs;
+  }
+  // 連続式：風上の柱の流量で面の流束を決め、水の体積 W を更新
+  const F=FL.F;F[0]=qin;
+  const jg=SIM.gateX>0&&!SIM.gateOpen?Math.round(SIM.gateX/dx):-1;
+  const d=SIM.dref;
+  // Rusanov 型の数値流束：F = ½(Q_j+Q_{j+1}) − ½ λ (η′_{j+1} − η′_j)、λ = max(|U| + √(g h))
+  // 水面差（乾いた側は河床面で置き換え）で拡散させるので、静水は保たれ、跳水や先端の振動も減衰する
+  for(let j=0;j<nx-1;j++){
+    let e0=FL.eta[j],e1=FL.eta[j+1];const w0=FL.h[j]>1e-6,w1=FL.h[j+1]>1e-6;
+    if(!w0&&!w1){F[j+1]=0;continue;}
+    if(w0&&!w1)e1=Math.max(e1,Math.min(FL.zb[j+1],e0));else if(w1&&!w0)e0=Math.max(e0,Math.min(FL.zb[j],e1));
+    const l0=Math.abs(FL.Ucol[j])+Math.sqrt(G*FL.h[j]),l1=Math.abs(FL.Ucol[j+1])+Math.sqrt(G*FL.h[j+1]),lam=Math.max(l0,l1);
+    let f=0.5*(FL.Qs[j]+FL.Qs[j+1])-0.5*lam*(e1-e0);
+    if(j+1===jg)f=0;F[j+1]=f;}
+  // 下流端は自由落下（流末）：末端の柱の流量と、末端水深 h に対する限界流量 √g·h^1.5 の大きい方を流出させる
+  // （末端で流れが減速しても、水がたまり続けて上流へ湛水が広がらないように）
+  {const he=FL.h[nx-1];F[nx]=Math.max(0,FL.Qs[nx-1],he>0.05*d?Math.sqrt(G)*Math.pow(he,1.5):0);}
+  for(let j=0;j<nx;j++){const out=Math.max(0,F[j+1])+Math.max(0,-F[j]),avail=FL.W[j]*dx/dtf;
+    if(out>avail&&out>0){const s=avail/out;if(F[j+1]>0)F[j+1]*=s;if(F[j]<0)F[j]*=s;}}
+  for(let j=0;j<nx;j++){FL.W[j]=Math.max(0,FL.W[j]-dtf*(F[j+1]-F[j])/dx);const e0=Math.max(FL.eta[j],FL.zb[j]);FL.eta[j]=etaFromW(j);
+    // 新しく水に浸かったセルには下のセルの流速を引き継ぐ
+    if(FL.eta[j]>e0){const b=j*K;const k0=Math.max(FL.kb[j],Math.floor((e0-y0)/dz)),k1=Math.min(K-1,Math.floor((FL.eta[j]-y0)/dz));for(let k=k0+1;k<=k1;k++)FL.U[b+k]=FL.U[b+k0];}}
+  SIM.Qout=(SIM.Qout||0)+F[nx]*dtf;SIM.Qin=(SIM.Qin||0)+F[0]*dtf;
+}
+
+/* ---------------- motion classification, sleeping, bed statistics ---------------- */
+const SLEEP_D=12,WAKE_D=9,FOCUS_WAKE=4;
+function isStatic(j){return PFIX[j]===1||PSPD[j]<0.5;}
+function zbAt(x){const j=colOf(x);return FL.zb[j];}
+function nearFocus(i){if(FOC<0)return false;const dx=PX[i]-PX[FOC],dy=PY[i]-PY[FOC],R=FOCUS_WAKE*SIM.dref+Math.max(PR[FOC],PTR[FOC]);return dx*dx+dy*dy<R*R;}
+function updateMotion(){
+  const th=0.1*SIM.dref,ts=0.02*SIM.dref,sl=P.sleep;
+  for(let i=0;i<N;i++){const dx=PX[i]-PXR[i],dy=PY[i]-PYR[i],d2=dx*dx+dy*dy;
+    PSPD[i]=(PFIX[i]===0&&d2>th*th)?1:0;PXR[i]=PX[i];PYR[i]=PY[i];
+    if(sl&&PFIX[i]===0&&d2<ts*ts&&i!==FOC&&PR[i]===PTR[i]&&PY[i]<zbAt(PX[i])-SLEEP_D*SIM.dref&&!nearFocus(i)){PFIX[i]=3;PVX[i]=PVY[i]=POM[i]=0;}}
+}
+function wakeCheck(){let n=0;
+  for(let i=0;i<N;i++){if(PFIX[i]!==3)continue;
+    if(!P.sleep||PY[i]>zbAt(PX[i])-WAKE_D*SIM.dref||nearFocus(i)||PR[i]!==PTR[i]){PFIX[i]=0;PSPD[i]=0;}else n++;}
+  SIM.nSleep=n;}
+// 柱ごとの河床面 z_b（静止粒子の面積 ÷ (Δx φ_b) を固定床の基準高さに足す）、流動層濃度、流砂量
+const tmpA=[];
+function bedStats(init){
+  const nx=FL.nx,dx=FL.dx,sc=P.Cstar/SIM.phib;
+  FL.As.fill(0);FL.Am.fill(0);FL.qs.fill(0);FL.Csum.fill(0);
+  for(let i=0;i<N;i++){const j=colOf(PX[i]),a=PI*PR[i]*PR[i];
+    if(init||isStatic(i))FL.As[j]+=a;else FL.Am[j]+=a;
+    if(PFIX[i]!==1)FL.qs[j]+=a*PVX[i];}
+  for(let j=0;j<nx;j++){FL.qs[j]*=sc/dx;}
+  // 河床面：空間平滑 [1 2 1]/4 と時間方向の指数移動平均
+  const raw=tmpA;raw.length=nx;for(let j=0;j<nx;j++)raw[j]=FL.zf[j]+FL.As[j]/(dx*SIM.phib);
+  for(let j=0;j<nx;j++){const l=raw[Math.max(0,j-1)],r=raw[Math.min(nx-1,j+1)],v=0.25*l+0.5*raw[j]+0.25*r;
+    FL.zb[j]=init?v:FL.zb[j]+(v-FL.zb[j])*0.15;}
+  // 流動層（z_b〜η）の平均濃度
+  for(let i=0;i<N;i++){if(PFIX[i]===1)continue;const j=colOf(PX[i]);if(PY[i]>FL.zb[j]&&PY[i]<FL.eta[j])FL.Csum[j]+=PI*PR[i]*PR[i];}
+  for(let j=0;j<nx;j++){const h=Math.max(0,FL.eta[j]-FL.zb[j]);const c=h>0.5*SIM.dref?FL.Csum[j]*sc/(dx*h):0;
+    FL.Cb[j]=init?c:FL.Cb[j]+(Math.min(P.Cstar,c)-FL.Cb[j])*0.15;FL.dzb[j]=FL.zb[j]-FL.zb0[j];}
+}
+
+/* ---------------- upstream supply ---------------- */
+function feedEnd(){const d=SIM.dref;return Math.min(Math.max(6*d,SIM.bedX0-1*d),12*d);}
+function supply(dtS){
+  const d=SIM.dref,t=SIM.t;
+  if(P.mode==='surge'){SIM.qinNow=0;return;}
+  const on=t<P.Tsup,Cin=P.mode==='steady'?P.Cin:0;
+  SIM.qinNow=on?P.q*(1-Cin):0;
+  // 流入流速：上流区間の勾配での等流水深 h_in = {q/(6.4√(g sinθ))}^(2/3)（U/u* ≈ 6.4 はこのモデルの清水等流の値）、U_in = q/h_in
+  const th=Math.max(0.5,GEO.th[0])*PI/180,hin=Math.pow(P.q/(6.4*Math.sqrt(G*Math.sin(th))),2/3);
+  SIM.hin=hin;SIM.Uin=on?P.q/hin:0;SIM.xFeed=feedEnd();
+  if(!on||Cin<=0)return;
+  SIM.Vdue+=P.q*Cin*dtS;
+  // 粒径は1粒ずつ抽選し、置けるまで同じ粒径で試し続ける（置きにくい粗粒を飛ばして細粒ばかり入る偏りを防ぐ）。
+  // 置けなかった分は次の機会に持ち越し、打ち切らない。置き場所は流入区間の流れの中と、その上の落とし込み帯（水面上 2d_max まで）
+  const sc=P.Cstar/SIM.phib,xEnd=feedEnd();
+  for(let att=0;att<80;att++){
+    if(!(SIM.pendD>0))SIM.pendD=sampleD();
+    const r=SIM.pendD/2,vol=PI*r*r*sc;if(SIM.Vdue<vol)break;
+    const x=0.6*d+r+rnd()*Math.max(0.1*d,xEnd-2*r-0.6*d),j=colOf(x),zb=FL.zb[j],eta=Math.max(FL.eta[j],zb);
+    const top=eta+2*SIM.dmax,y=zb+r+0.1*d+rnd()*Math.max(0,top-zb-2*r-0.1*d);
+    let ok=y-r>zfAt(x);
+    if(ok)for(let k=0;k<N;k++){const dx=PX[k]-x;if(dx>r+SIM.rmaxAll||dx<-r-SIM.rmaxAll)continue;const dy=PY[k]-y,rs=PR[k]+r;if(dx*dx+dy*dy<rs*rs*1.01){ok=false;break;}}
+    if(!ok)continue;
+    const S=fluidAt(x,y),i=addP(x,y,r,0);PVX[i]=y<eta?Math.max(S.u,0.7*SIM.Uin):0.5*SIM.Uin;PVY[i]=y<eta?S.v:0;PSPD[i]=1;
+    SIM.Vdue-=vol;SIM.Vin+=vol;if(classOf(i)===1)SIM.VinC+=vol*2*r;SIM.VinW+=vol*2*r;SIM.pendD=0;
+  }
+}
+function removeOutflow(){
+  const sc=P.Cstar/SIM.phib;let any=false;
+  for(let i=N-1;i>=0;i--){if(POUT[i]){SIM.Vout+=PI*PR[i]*PR[i]*sc;SIM.nOut++;removeP(i);any=true;}}
+  if(any){const s=SIM.stepNo;for(const [k,c] of CM)if(c.st<s-1)CM.delete(k);}
+}
+
+/* ---------------- records: station profile, time series, x–t, budget, fronts ---------------- */
+const ST={lo:-4,bw:0.25,nb:200,n:0};for(const k of ['tot','c0','c1','uf','up','it','im','v0','v1','pu','pa'])ST[k]=new Float64Array(ST.nb);
+const REC_={};
+function resetRecords(){
+  ST.n=0;for(const k of ['tot','c0','c1','uf','up'])ST[k].fill(0);
+  REC_.ts={t:[],h:[],U:[],C:[],qs:[],dz:[],eta:[]};
+  REC_.xt={t:[],dz:[],h:[],C:[],every:0.1,next:0};
+  REC_.bud={t:[],Vin:[],Vout:[],dVs:[],Vm:[]};
+  REC_.front={t:[],xw:[],xs:[],xd:[]};
+}
+function stationCol(){return colOf(P.xs*SIM.dref);}
+function sampleStation(){
+  const d=SIM.dref,js=stationCol(),dx=FL.dx,x0=(js-1)*dx,x1=(js+2)*dx,zb=FL.zb[js];
+  const bw=ST.bw*d,nb=ST.nb,base=zb+ST.lo*d,sc=P.Cstar/SIM.phib,cell=(x1-x0)*bw;
+  const it=ST.it,im=ST.im,v0=ST.v0,v1=ST.v1,pu=ST.pu,pa=ST.pa;it.fill(0);im.fill(0);v0.fill(0);v1.fill(0);pu.fill(0);pa.fill(0);
+  for(let i=0;i<N;i++){if(i===FOC)continue;const x=PX[i];if(x<x0||x>=x1)continue;const r=PR[i],y=PY[i]-base;
+    let k0=Math.floor((y-r)/bw),k1=Math.floor((y+r)/bw);if(k1<0||k0>=nb)continue;if(k0<0)k0=0;if(k1>=nb)k1=nb-1;
+    const cl=classOf(i),vv=cl===1?v1:cl===0?v0:null;let prev=areaBelow(k0*bw-y,r);
+    for(let k=k0;k<=k1;k++){const ab=areaBelow((k+1)*bw-y,r),wa=ab-prev;prev=ab;if(wa<=0)continue;it[k]+=wa;pu[k]+=wa*PVX[i];pa[k]+=wa;if(vv){im[k]+=wa;vv[k]+=wa*2*r;}}}
+  const a=ST.n===0?1:1-Math.exp(-0.01/P.ctau);
+  for(let k=0;k<nb;k++){const cm=im[k]*sc/cell,vs=v0[k]+v1[k],c1=vs>0?cm*v1[k]/vs:0;
+    ST.tot[k]+=(it[k]*sc/cell-ST.tot[k])*a;ST.c0[k]+=(cm-c1-ST.c0[k])*a;ST.c1[k]+=(c1-ST.c1[k])*a;
+    const y=base+(k+0.5)*bw;let uf=0;for(let jj=js-1;jj<=js+1;jj++)uf+=colU(Math.max(0,Math.min(FL.nx-1,jj)),y);uf/=3;
+    if(y>FL.eta[js])uf=0;
+    ST.uf[k]+=(uf-ST.uf[k])*a;const up=pa[k]>0?pu[k]/pa[k]:ST.up[k];ST.up[k]+=(up-ST.up[k])*a;}
+  ST.n++;
+}
+function record(){
+  const t=SIM.t,js=stationCol(),R=REC_,d=SIM.dref,nx=FL.nx;
+  if(SIM.statCount%5===0){
+    const h=Math.max(0,FL.eta[js]-FL.zb[js]);
+    R.ts.t.push(t);R.ts.h.push(h);R.ts.U.push(h>0.2*d?FL.Qs[js]/h:0);R.ts.C.push(FL.Cb[js]);R.ts.qs.push(FL.qs[js]);R.ts.dz.push(FL.dzb[js]);R.ts.eta.push(FL.eta[js]);
+    let As=0,Am=0;for(let j=0;j<nx;j++){As+=FL.As[j];Am+=FL.Am[j];}const sc=P.Cstar/SIM.phib;
+    R.bud.t.push(t);R.bud.Vin.push(SIM.Vin);R.bud.Vout.push(SIM.Vout);R.bud.dVs.push((As-SIM.As0)*sc);R.bud.Vm.push(Am*sc);
+    // 先端：水は水深 0.3d 超、土砂は前後 2 柱（幅 5d）の移動土砂が粒子 2 個分（0.5d² 相当）以上、堆積は Δz_b > 0.5d の最も下流の位置
+    let xw=0,xs=0,xd=0;for(let j=0;j<nx;j++){const x=(j+0.5)*FL.dx;if(FL.h[j]>0.3*d)xw=x;
+      let am=0;for(let k=Math.max(0,j-2);k<=Math.min(nx-1,j+2);k++)am+=FL.Am[k];if(am>0.5*d*d)xs=x;if(FL.dzb[j]>0.5*d)xd=x;}
+    R.front.t.push(t);R.front.xw.push(xw);R.front.xs.push(xs);R.front.xd.push(xd);
+    for(const g of [R.ts,R.bud,R.front])if(g.t.length>4000)for(const k in g)g[k]=g[k].filter((_,i)=>i%2===0);
+  }
+  if(t>=R.xt.next){R.xt.t.push(t);R.xt.dz.push(Float32Array.from(FL.dzb));R.xt.h.push(Float32Array.from(FL.h));R.xt.C.push(Float32Array.from(FL.Cb));
+    R.xt.next=t+R.xt.every;
+    if(R.xt.t.length>700){for(const k of ['t','dz','h','C'])R.xt[k]=R.xt[k].filter((_,i)=>i%2===0);R.xt.every*=2;}}
+}
+function stats(){
+  removeOutflow();
+  if(SIM.statCount>0&&SIM.statCount%5===0)updateMotion();
+  wakeCheck();
+  bedStats(false);
+  for(let j=0;j<FL.nx;j++)FL.eta[j]=etaFromW(j);   // 河床面が動いたら、表面水の体積を保ったまま水面を更新
+  supply(0.01);
+  sampleStation();
+  record();
+  SIM.statCount++;
+}
+
+/* ---------------- focus particle ---------------- */
+function releaseFocus(next){if(FOC>=0&&FOC!==next){if(PFIX[FOC]===2||PFIX[FOC]===3)PFIX[FOC]=0;PTR[FOC]=PR0[FOC];if(PTR[FOC]!==PR[FOC])SIM.resizing=true;}}
+// x の位置で、河床面から深さ s·d に最も近い静止粒子を注目粒子にする（s=0 なら河床表面の粒子）
+function placeFocusAt(x,s,dnew){
+  const d=SIM.dref,yt=zbAt(x)-Math.max(0,s)*d;let best=-1,bd=Infinity;
+  for(let j=0;j<N;j++){if(PFIX[j]===1||!isStatic(j))continue;const dx=PX[j]-x,dy=PY[j]-(s>0?yt:yt+PR[j]),dd=dx*dx+dy*dy;if(dd<bd){bd=dd;best=j;}}
+  if(best<0)return false;
+  releaseFocus(best);if(PFIX[best]===3)PFIX[best]=0;FOC=best;PTR[best]=dnew/2;if(PTR[best]!==PR[best])SIM.resizing=true;
+  PVX[best]=PVY[best]=POM[best]=0;if(P.hold)PFIX[best]=2;
+  for(let j=0;j<N;j++)if(PFIX[j]===3&&nearFocus(j))PFIX[j]=0;
+  tsHead=0;tsCount=0;IMP.length=0;computeDt();return true;
+}
+function selectFocus(i){if(i<0||PFIX[i]===1)return;releaseFocus(i);FOC=i;if(PFIX[i]===3)PFIX[i]=0;if(P.hold)PFIX[i]=2;
+  for(let j=0;j<N;j++)if(PFIX[j]===3&&nearFocus(j))PFIX[j]=0;tsHead=0;tsCount=0;IMP.length=0;}
+function setFocusSize(dmm){if(FOC<0)return;PTR[FOC]=dmm/2000;if(PTR[FOC]!==PR[FOC])SIM.resizing=true;computeDt();}
+function setHold(v){P.hold=v;if(FOC>=0){if(v){PFIX[FOC]=2;PVX[FOC]=PVY[FOC]=POM[FOC]=0;}else if(PFIX[FOC]===2)PFIX[FOC]=0;}}
+function wsub(r){return (P.sigma-P.rho)*V43*r*r*r*G;}
+function localAngle(x){const S=FL.Sb[colOf(x)];return Math.atan(-S);}   // 河床面の傾き（下り勾配が正）
+function pushFocus(){
+  if(FOC<0||FA.n===0)return;const f=FOC,n=FA.n,h=tsHead;
+  TS.t[h]=SIM.t;TS.fdx[h]=FA.fdx/n;TS.fdy[h]=FA.fdy/n;TS.fl[h]=FA.fl/n;TS.fb[h]=FA.fb/n;TS.fbx[h]=FA.fbx/n;TS.fcx[h]=FA.cx/n;TS.fcy[h]=FA.cy/n;
+  TS.nc[h]=FA.nc/n;TS.vx[h]=PVX[f];TS.vy[h]=PVY[f];TS.x[h]=PX[f];TS.y[h]=PY[f];TS.p[h]=FA.p/n;TS.q[h]=FA.q/n;TS.wp[h]=wsub(PR[f]);TS.al[h]=localAngle(PX[f]);
+  tsHead=(h+1)%TSC;if(tsCount<TSC)tsCount++;
+  FA.n=0;FA.fdx=FA.fdy=FA.fl=FA.fb=FA.fbx=FA.cx=FA.cy=FA.nc=FA.p=FA.q=0;
+}
+function tsIdx(back){return (tsHead-1-back+TSC*2)%TSC;}
+function resetFR(){FR.fdx=FR.fdy=FR.fl=FR.fb=FR.fbx=FR.cx=FR.cy=0;FR.nc=0;FR.nslip=0;FR.mob=0;FR.sxx=FR.syy=FR.sxy=0;FCn=0;}
+
+/* ---------------- step ---------------- */
+function step(rec){
+  growAll();resetFR();REC=!!rec;if(REC)nCH=0;
+  forces();integrate();
+  SIM.stepNo++;
+  if(SIM.phase==='run'){
+    SIM.t+=SIM.dt;
+    if(SIM.stepNo%SIM.nsub===0){coupling();solveFluid(SIM.nsub*SIM.dt);}
+    if(FOC>=0){const r=PR[FOC],V=V43*r*r*r;FA.n++;FA.fdx+=FR.fdx;FA.fdy+=FR.fdy;FA.fl+=FR.fl;FA.fb+=FR.fb;FA.fbx+=FR.fbx;FA.cx+=FR.cx;FA.cy+=FR.cy;FA.nc+=FR.nc;
+      const sxx=FR.sxx/V,syy=FR.syy/V,sxy=FR.sxy/V;FA.p+=0.5*(sxx+syy);FA.q+=Math.sqrt(0.25*(sxx-syy)*(sxx-syy)+sxy*sxy);}
+    if(SIM.t>=SIM.nextStat){stats();SIM.nextStat+=0.01;}
+    if(SIM.t>=(SIM.nextFs||0)){pushFocus();SIM.nextFs=SIM.t+0.002;}
+  }else if(SIM.phase==='settle'){
+    SIM.settleT+=SIM.dt;
+    if(SIM.settleT>0.2&&SIM.vmean<0.003){SIM.settleOK=true;finishSettle();}
+    else if(SIM.settleT>1.5+0.03*Math.max(P.Hb,P.mode==='surge'?P.Hres:0)){SIM.settleOK=false;finishSettle();}
+  }else if(SIM.phase==='relax'){
+    SIM.settleT+=SIM.dt;
+    if((SIM.settleT>0.15&&SIM.vmean<0.001)||SIM.settleT>1.5)finishRelax();
+  }
+  if(SIM.stepNo%256===0){const s=SIM.stepNo;for(const [k,c] of CM)if(c.st<s-1)CM.delete(k);}
+}
+function cInf(theta){const tt=Math.tan(theta*PI/180),tp=Math.tan(P.phiInt*PI/180);const den=(P.sigma-P.rho)*(tp-tt);
+  let c=den>0?P.rho*tt/den:Infinity;return Math.min(c,0.9*P.Cstar);}
+
+if(!HAS_DOM){globalThis.__flume={P,SIM,GEO,FL,ST,REC:REC_,TS,FR,IMP,regenerate,step,derive,zfAt,thAt,cInf,placeFocusAt,setFocusSize,setHold,
+  get N(){return N;},get FOC(){return FOC;},arrays:()=>({PX,PY,PVX,PVY,PR,PFIX,PSPD}),tsCount:()=>tsCount,tsIdx};return;}
+
+/* ================= 画面（描画・操作） ================= */
+const $=id=>document.getElementById(id);
+const T={};let LUTV=[],LUTS=[],LUTC=[],LUTH=[],LUTD=[];
+function hexRGB(c){c=(c||'').trim();if(c[0]==='#'){if(c.length===4)c='#'+c[1]+c[1]+c[2]+c[2]+c[3]+c[3];return [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];}return [128,128,128];}
+function mixc(a,b,t){return [Math.round(a[0]+(b[0]-a[0])*t),Math.round(a[1]+(b[1]-a[1])*t),Math.round(a[2]+(b[2]-a[2])*t)];}
+function css(c){return 'rgb('+c[0]+','+c[1]+','+c[2]+')';}
+function rgba(a,al){return 'rgba('+a[0]+','+a[1]+','+a[2]+','+al+')';}
+let xtDirty=true;
+function readTheme(){const cs=getComputedStyle(document.documentElement);
+  for(const k of ['bg','panel','ink','muted','line','water','water-soft','focus','lift','cy','fast','grain-a','grain-b','fixed','ok','warn','cend'])T[k]=hexRGB(cs.getPropertyValue('--'+k));
+  LUTV=[];LUTS=[];for(let i=0;i<64;i++){LUTV.push(css(mixc(T['grain-a'],T.fast,i/63)));LUTS.push(css(mixc(T['grain-a'],T['grain-b'],i/63)));}
+  LUTC=[];LUTH=[];LUTD=[];for(let i=0;i<=100;i++){const t=Math.pow(i/100,0.8);LUTC.push(mixc(T.panel,T.cend,t));LUTH.push(mixc(T.panel,T.water,t));}
+  for(let i=0;i<=200;i++){const v=(i-100)/100;LUTD.push(v<0?mixc(T.panel,T.water,Math.pow(-v,0.8)):mixc(T.panel,T.cend,Math.pow(v,0.8)));}
+  T.mono='11px "IBM Plex Mono", ui-monospace, Menlo, monospace';xtDirty=true;}
+readTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readTheme);
+new MutationObserver(readTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+function fit(cv,w,h){const dpr=Math.min(2,window.devicePixelRatio||1);
+  if(cv._w!==w||cv._h!==h||cv._d!==dpr){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.height=h+'px';cv._w=w;cv._h=h;cv._d=dpr;}
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);return ctx;}
+function niceStep(span,n){const raw=span/Math.max(1,n);const p=Math.pow(10,Math.floor(Math.log10(raw)));const m=raw/p;return (m<1.5?1:m<3?2:m<7?5:10)*p;}
+function fmtTick(v,st){const dg=Math.max(0,-Math.floor(Math.log10(st)+1e-9));return (Math.abs(v)<st*1e-6?0:v).toFixed(Math.min(4,dg));}
+function axes(ctx,bx,xr,yr,xl,yl,opt){
+  opt=opt||{};const [x0,y0,x1,y1]=bx;const X=v=>x0+(v-xr[0])/(xr[1]-xr[0])*(x1-x0),Y=v=>y1-(v-yr[0])/(yr[1]-yr[0])*(y1-y0);
+  ctx.font=T.mono;ctx.lineWidth=1;
+  const sx=niceStep(xr[1]-xr[0],(x1-x0)/70),sy=niceStep(yr[1]-yr[0],(y1-y0)/32);
+  ctx.strokeStyle=rgba(T.line,1);ctx.fillStyle=rgba(T.muted,1);
+  ctx.textAlign='center';ctx.textBaseline='top';
+  for(let v=Math.ceil(xr[0]/sx)*sx;v<=xr[1]+1e-12;v+=sx){const x=X(v);if(!opt.nogrid){ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();}ctx.fillText(fmtTick(v,sx),x,y1+4);}
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let v=Math.ceil(yr[0]/sy)*sy;v<=yr[1]+1e-12;v+=sy){const y=Y(v);if(!opt.nogrid){ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();}ctx.fillText(fmtTick(v,sy),x0-5,y);}
+  if(xl){ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillStyle=rgba(T.ink,0.8);ctx.fillText(xl,x1-2,y1-3);}
+  if(yl){ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle=rgba(T.ink,0.8);ctx.fillText(yl,x0+6,y0+3);}
+  return {X,Y};
+}
+function rightAxis(ctx,bx,yr,lab){const [x0,y0,x1,y1]=bx;const Y=v=>y1-(v-yr[0])/(yr[1]-yr[0])*(y1-y0);const sy=niceStep(yr[1]-yr[0],(y1-y0)/32);
+  ctx.font=T.mono;ctx.fillStyle=rgba(T.lift,1);ctx.textAlign='left';ctx.textBaseline='middle';
+  for(let v=Math.ceil(yr[0]/sy)*sy;v<=yr[1]+1e-12;v+=sy)ctx.fillText(fmtTick(v,sy),x1+4,Y(v));
+  if(lab){ctx.textAlign='right';ctx.textBaseline='top';ctx.fillText(lab,x1-2,y0+3);}return Y;}
+function breakLines(ctx,A,y0,y1,unit){ctx.setLineDash([4,4]);ctx.strokeStyle=rgba(T.focus,0.7);ctx.lineWidth=1;
+  for(let k=1;k<GEO.xb.length-1;k++){const x=A.X(GEO.xb[k]/unit);ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();}ctx.setLineDash([]);}
+function chartH(w,ratio,lo,hi){return Math.round(Math.min(hi,Math.max(lo,w*ratio)));}
+const dd=()=>SIM.dref;
+
+/* ---------- particle colour ---------- */
+function bucketOf(i,uref){const run=SIM.phase==='run';
+  if(PFIX[i]===1)return 64;
+  if(P.color==='vel'){let t=PVX[i]/uref;if(!run)t=0;return Math.max(0,Math.min(63,Math.round(t*63)));}
+  if(P.color==='size'){if(SIM.dmax===SIM.dmin)return 32;return Math.max(0,Math.min(63,Math.round((2*PR[i]-SIM.dmin)/(SIM.dmax-SIM.dmin)*63)));}
+  return PFIX[i]===3?66:isStatic(i)?40:65;}
+function bucketFill(b){return b===64?rgba(T.fixed,1):b===65?rgba(T.fast,1):b===66?css(mixc(T['grain-a'],T.fixed,0.45)):(P.color==='size'||P.color==='state'?LUTS[b]:LUTV[b]);}
+function uRef(){let m=0.3;for(let j=0;j<FL.nx;j++){if(FL.h[j]>0.5*dd()){const u=FL.Qs[j]/FL.h[j];if(u>m)m=u;}}return m;}
+
+/* ---------- overview ---------- */
+const OV={s:1,ox:0,yb:0,H:0};
+function renderOverview(){
+  const cv=$('overview'),w=cv.parentElement.clientWidth;if(!w||!GEO.Lx)return;
+  const d=dd(),Lx=GEO.Lx;let ymax=-Infinity;
+  for(let j=0;j<FL.nx;j++){const v=Math.max(FL.eta[j]||0,FL.zb[j]||0);if(v>ymax)ymax=v;}
+  if(!isFinite(ymax)||SIM.phase!=='run')ymax=GEO.zMax+Math.max(P.Hb,P.mode==='surge'?P.Hb+P.Hres+P.Wres:0)*d;
+  const yb=GEO.zMin-d,ytop=ymax+3*d,s=w/Lx;let H=Math.round((ytop-yb)*s);H=Math.max(70,Math.min(Math.round(w*0.45),H));
+  const sc=Math.min(s,H/(ytop-yb));const ox=(w-Lx*sc)/2;
+  OV.s=sc;OV.ox=ox;OV.yb=yb;OV.H=H;
+  const X=x=>ox+x*sc,Y=y=>H-(y-yb)*sc;
+  const ctx=fit(cv,w,H);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,H);
+  if(SIM.phase==='run'){ctx.fillStyle=rgba(T['water-soft'],1);ctx.beginPath();
+    for(let j=0;j<FL.nx;j++){if(FL.h[j]<0.05*d)continue;ctx.rect(X(j*FL.dx),Y(FL.eta[j]),FL.dx*sc+0.6,(FL.eta[j]-FL.zb[j])*sc);}ctx.fill();}
+  const uref=uRef(),bk=new Array(67);for(let b=0;b<67;b++)bk[b]=[];
+  for(let i=0;i<N;i++){if(i===FOC)continue;bk[bucketOf(i,uref)].push(i);}
+  for(let b=0;b<67;b++){const l=bk[b];if(!l.length)continue;ctx.fillStyle=bucketFill(b);ctx.beginPath();
+    for(const i of l){const r=Math.max(0.7,PR[i]*sc*0.95),x=X(PX[i]),y=Y(PY[i]);ctx.moveTo(x+r,y);ctx.arc(x,y,r,0,2*PI);}ctx.fill();}
+  // 水：全体図は縦に縮むので、流れの層に薄く水色を重ね、水面を線で描く
+  if(SIM.phase==='run'){
+    ctx.fillStyle=rgba(T.water,0.18);ctx.beginPath();
+    for(let j=0;j<FL.nx;j++){if(FL.h[j]<0.05*d)continue;ctx.rect(X(j*FL.dx),Y(FL.eta[j]),FL.dx*sc+0.6,(FL.eta[j]-FL.zb[j])*sc);}ctx.fill();
+    ctx.strokeStyle=rgba(T.water,1);ctx.lineWidth=2;ctx.lineJoin='round';ctx.beginPath();let pen=false;
+    for(let j=0;j<FL.nx;j++){if(FL.h[j]<0.05*d){pen=false;continue;}const x=X((j+0.5)*FL.dx),y=Y(FL.eta[j]);if(pen)ctx.lineTo(x,y);else{ctx.moveTo(x,y);pen=true;}}ctx.stroke();}
+  // 拡大範囲・測点
+  const zw=+$('zoomw').value*d,zc=zoomCenter();
+  ctx.strokeStyle=rgba(T.ink,0.8);ctx.lineWidth=1.2;ctx.strokeRect(X(zc-zw/2),1,zw*sc,H-2);
+  ctx.strokeStyle=rgba(T.focus,1);ctx.lineWidth=1.5;const xs=X(P.xs*d);ctx.beginPath();ctx.moveTo(xs,0);ctx.lineTo(xs,H);ctx.stroke();
+  if(SIM.gateX>0&&SIM.phase!=='run'){ctx.strokeStyle=rgba(T.ink,1);ctx.lineWidth=2;const xg=X(SIM.gateX);ctx.beginPath();ctx.moveTo(xg,Y(zfAt(SIM.gateX)));ctx.lineTo(xg,0);ctx.stroke();}
+  if(FOC>=0){ctx.fillStyle=rgba(T.focus,1);ctx.beginPath();ctx.arc(X(PX[FOC]),Y(PY[FOC]),Math.max(2,PR[FOC]*sc),0,2*PI);ctx.fill();}
+  ctx.font=T.mono;ctx.fillStyle=rgba(T.muted,1);ctx.textAlign='left';ctx.textBaseline='top';
+  for(let k=0;k<GEO.th.length;k++){const xm=0.5*(GEO.xb[k]+GEO.xb[k+1]);ctx.fillText(fmtTheta(GEO.th[k])+'°',X(xm)-10,Y(zfAt(xm))+4>H-12?H-12:Y(zfAt(xm))+4);}
+  if(SIM.phase!=='run'){ctx.fillStyle=rgba(T.ink,0.85);ctx.textAlign='center';ctx.font='13px "IBM Plex Sans JP", system-ui, sans-serif';
+    ctx.fillText(SIM.phase==='settle'?'河床を生成中（沈降）…':'河床を安定させています…',w/2,6);
+    ctx.font=T.mono;ctx.fillStyle=rgba(T.muted,1);ctx.fillText('計算時間 '+SIM.settleT.toFixed(2)+' s　平均速度 '+(SIM.vmean*100).toFixed(2)+' cm/s　粒子 '+N,w/2,24);}
+}
+function fmtTheta(t){return t<0.01?t.toFixed(3):t<1?t.toFixed(2):(+t.toFixed(1)).toString();}
+let zoomC=null;
+function zoomCenter(){const d=dd(),zw=+$('zoomw').value*d,Lx=GEO.Lx;
+  if(zoomC===null)zoomC=P.xs*d;
+  if(P.follow&&SIM.phase==='run'&&REC_.front.t.length){const k=REC_.front.t.length-1,xf=Math.max(REC_.front.xs[k],REC_.front.xw[k]);
+    if(xf>0){const want=xf-0.3*zw;if(Math.abs(want-zoomC)>0.15*zw)zoomC=want;}}
+  return Math.max(zw/2,Math.min(Lx-zw/2,zoomC));}
+$('overview').addEventListener('click',ev=>{const rc=ev.currentTarget.getBoundingClientRect();const x=(ev.clientX-rc.left-OV.ox)/OV.s;zoomC=x;P.follow=false;$('follow').checked=false;});
+
+/* ---------- zoom view ---------- */
+const ZV={s:1,x0:0,yb:0,H:0,ox:0};
+function renderZoomView(){
+  const cv=$('zoomv'),w=cv.parentElement.clientWidth;if(!w||!GEO.Lx)return;
+  const d=dd(),zw=+$('zoomw').value*d,xc=zoomCenter(),xa=xc-zw/2,xb=xc+zw/2;
+  let ylo=Infinity,yhi=-Infinity;const ja=colOf(xa),jb=colOf(xb);
+  for(let j=ja;j<=jb;j++){ylo=Math.min(ylo,FL.zf[j]);yhi=Math.max(yhi,FL.eta[j]||0,FL.zb[j]||0);}
+  if(SIM.phase!=='run'){yhi=Math.max(yhi,zfAt(xa)+(P.Hb+(P.mode==='surge'?P.Hres:0))*d);}
+  ylo-=0.5*d;yhi+=2.5*d;
+  let s=w/zw,H=Math.round((yhi-ylo)*s),ox=0;const Hmax=Math.round(w*0.7);if(H>Hmax){s=Hmax/(yhi-ylo);H=Hmax;ox=(w-zw*s)/2;}
+  if(H<120){H=120;}
+  ZV.s=s;ZV.x0=xa;ZV.yb=ylo;ZV.H=H;ZV.ox=ox;
+  const X=x=>ox+(x-xa)*s,Y=y=>H-(y-ylo)*s;
+  const ctx=fit(cv,w,H);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,H);
+  const run=SIM.phase==='run';
+  if(run){ctx.fillStyle=rgba(T['water-soft'],1);ctx.beginPath();
+    for(let j=ja;j<=jb;j++){if(FL.h[j]<0.02*d)continue;ctx.rect(X(j*FL.dx),Y(FL.eta[j]),FL.dx*s+0.6,(FL.eta[j]-FL.zb[j])*s);}ctx.fill();}
+  const uref=uRef(),bk=new Array(67);for(let b=0;b<67;b++)bk[b]=[];
+  for(let i=0;i<N;i++){if(i===FOC)continue;if(PX[i]+PR[i]<xa||PX[i]-PR[i]>xb)continue;bk[bucketOf(i,uref)].push(i);}
+  for(let b=0;b<67;b++){const l=bk[b];if(!l.length)continue;ctx.fillStyle=bucketFill(b);ctx.beginPath();
+    for(const i of l){const r=PR[i]*s*0.93,x=X(PX[i]),y=Y(PY[i]);ctx.moveTo(x+r,y);ctx.arc(x,y,r,0,2*PI);}ctx.fill();}
+  if(P.chains&&nCH>0){let sum=0;for(let k=0;k<nCH;k++)sum+=CHf[k];const mean=sum/nCH;ctx.strokeStyle=rgba(T.ink,0.6);ctx.lineCap='round';
+    for(let k=0;k<nCH;k++){const i=CHi[k],j=CHj[k];if(PX[i]<xa||PX[i]>xb)continue;const lw=Math.min(5,0.4+1.4*CHf[k]/mean);if(lw<0.6)continue;ctx.lineWidth=lw;
+      ctx.beginPath();ctx.moveTo(X(PX[i]),Y(PY[i]));ctx.lineTo(X(PX[j]),Y(PY[j]));ctx.stroke();}}
+  if(ox>0){ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,ox,H);ctx.fillRect(w-ox,0,ox,H);}
+  ctx.font=T.mono;
+  if(run){
+    ctx.setLineDash([5,4]);ctx.strokeStyle=rgba(T.ink,0.55);ctx.lineWidth=1;ctx.beginPath();
+    for(let j=ja;j<=jb;j++){const x=X((j+0.5)*FL.dx),y=Y(FL.zb[j]);j===ja?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();ctx.setLineDash([]);
+    ctx.strokeStyle=rgba(T.water,1);ctx.lineWidth=2;ctx.beginPath();let pen=false;
+    for(let j=ja;j<=jb;j++){if(FL.h[j]<0.02*d){pen=false;continue;}const x=X((j+0.5)*FL.dx),y=Y(FL.eta[j]);if(pen)ctx.lineTo(x,y);else{ctx.moveTo(x,y);pen=true;}}ctx.stroke();
+  }
+  // 折れ点・測点
+  ctx.setLineDash([4,4]);ctx.strokeStyle=rgba(T.focus,0.7);ctx.lineWidth=1;
+  for(let k=1;k<GEO.xb.length-1;k++){const xbk=GEO.xb[k];if(xbk<xa||xbk>xb)continue;const x=X(xbk);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+    ctx.fillStyle=rgba(T.focus,1);ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText('折れ点 '+(xbk/d).toFixed(0)+'d',x+4,4);}
+  ctx.setLineDash([]);
+  const xsp=P.xs*d;if(xsp>=xa&&xsp<=xb){ctx.strokeStyle=rgba(T.focus,1);ctx.lineWidth=1.5;const x=X(xsp);ctx.beginPath();ctx.moveTo(x,H);ctx.lineTo(x,H-14);ctx.stroke();
+    ctx.fillStyle=rgba(T.focus,1);ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText('測点',x,H-16);}
+  if(SIM.gateX>0&&SIM.phase!=='run'&&SIM.gateX>=xa&&SIM.gateX<=xb){ctx.strokeStyle=rgba(T.ink,1);ctx.lineWidth=2.5;const x=X(SIM.gateX);ctx.beginPath();ctx.moveTo(x,Y(zfAt(SIM.gateX)));ctx.lineTo(x,0);ctx.stroke();}
+  if(FOC>=0&&PX[FOC]>=xa-PR[FOC]&&PX[FOC]<=xb+PR[FOC]){const r=PR[FOC]*s,x=X(PX[FOC]),y=Y(PY[FOC]);
+    ctx.fillStyle=rgba(T.focus,1);ctx.beginPath();ctx.arc(x,y,r*0.93,0,2*PI);ctx.fill();
+    ctx.strokeStyle=rgba(T.focus,1);ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,r+4,0,2*PI);ctx.stroke();}
+  if(run&&performance.now()<previewUntil){const rr=P.df/2000,xp=P.xs*d,yp=zbAt(xp)-P.fdepth*d+(P.fdepth>0?0:rr);
+    if(xp>=xa&&xp<=xb){ctx.setLineDash([4,3]);ctx.strokeStyle=rgba(T.focus,1);ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(X(xp),Y(yp),rr*s,0,2*PI);ctx.stroke();ctx.setLineDash([]);}}
+  ctx.fillStyle=rgba(T.muted,1);ctx.textAlign='right';ctx.textBaseline='top';ctx.fillText('x = '+(xa/d).toFixed(0)+'〜'+(xb/d).toFixed(0)+'d',w-ox-6,4);
+}
+let previewUntil=0;
+$('zoomv').addEventListener('click',ev=>{if(SIM.phase!=='run')return;const rc=ev.currentTarget.getBoundingClientRect();
+  const x=ZV.x0+(ev.clientX-rc.left-ZV.ox)/ZV.s,y=ZV.yb+(ZV.H-(ev.clientY-rc.top))/ZV.s;
+  let best=-1,bd=Infinity;for(let i=0;i<N;i++){if(PFIX[i]===1)continue;const dx=PX[i]-x,dy=PY[i]-y,dist=Math.sqrt(dx*dx+dy*dy)-PR[i];if(dist<bd){bd=dist;best=i;}}
+  if(best>=0&&bd<Math.max(0.6*dd(),6/ZV.s)){selectFocus(best);P.df=+(2000*PTR[best]).toFixed(1);B.df.sync();if(!running){resetFR();REC=false;forces();}}});
+
+/* ---------- longitudinal charts ---------- */
+const LP={A:null,bx:null,unit:1};
+function renderLprof(){
+  const cv=$('lprof'),w=cv.clientWidth;if(!w)return;const h=chartH(w,0.3,200,300);
+  const ctx=fit(cv,w,h);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,h);
+  if(SIM.phase!=='run')return;
+  const d=dd(),nx=FL.nx,Lx=GEO.Lx/d;let ymin=Infinity,ymax=-Infinity;
+  for(let j=0;j<nx;j++){ymin=Math.min(ymin,FL.zf[j]);ymax=Math.max(ymax,FL.eta[j],FL.zb[j],FL.zb0[j]);}
+  ymin=ymin/d-1;ymax=ymax/d+2;
+  const bx=[50,12,w-14,h-26];
+  const A=axes(ctx,bx,[0,Lx],[ymin,ymax],'x [×d]','標高 [×d]');LP.A=A;LP.bx=bx;
+  const vex=((bx[3]-bx[1])/(ymax-ymin))/((bx[2]-bx[0])/Lx);$('lp_sub').textContent='標高 [×d]（鉛直方向を '+vex.toFixed(1)+' 倍に拡大）、横軸 x [×d]';
+  const xc=j=>A.X((j+0.5)*FL.dx/d);
+  // 水
+  ctx.fillStyle=rgba(T['water-soft'],1);ctx.beginPath();
+  for(let j=0;j<nx;j++){if(FL.h[j]<0.05*d)continue;const x0=A.X(j*FL.dx/d),x1=A.X((j+1)*FL.dx/d);ctx.rect(x0,A.Y(FL.eta[j]/d),x1-x0+0.5,A.Y(FL.zb[j]/d)-A.Y(FL.eta[j]/d));}ctx.fill();
+  // 堆積（褐）・侵食（青）
+  for(let j=0;j<nx;j++){const dz=FL.dzb[j];if(Math.abs(dz)<0.1*d)continue;const x0=A.X(j*FL.dx/d),x1=A.X((j+1)*FL.dx/d);
+    ctx.fillStyle=dz>0?rgba(T.cend,0.35):rgba(T.water,0.35);const ya=A.Y(FL.zb0[j]/d),yb=A.Y(FL.zb[j]/d);ctx.fillRect(x0,Math.min(ya,yb),x1-x0+0.5,Math.abs(yb-ya));}
+  const line=(arr,col,lw,dash,skip)=>{ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.setLineDash(dash||[]);ctx.beginPath();let pen=false;
+    for(let j=0;j<nx;j++){if(skip&&skip(j)){pen=false;continue;}const x=xc(j),y=A.Y(arr[j]/d);if(pen)ctx.lineTo(x,y);else{ctx.moveTo(x,y);pen=true;}}ctx.stroke();ctx.setLineDash([]);};
+  line(FL.zf,rgba(T.fixed,1),1.5);
+  line(FL.zb0,rgba(T.muted,1),1.2,[5,4]);
+  line(FL.zb,rgba(T.cend,1),2);
+  line(FL.eta,rgba(T.water,1),1.5,null,j=>FL.h[j]<0.05*d);
+  breakLines(ctx,A,bx[1],bx[3],d);
+  const xs=A.X(P.xs);ctx.strokeStyle=rgba(T.focus,1);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xs,bx[1]);ctx.lineTo(xs,bx[3]);ctx.stroke();
+  ctx.font=T.mono;ctx.fillStyle=rgba(T.muted,1);ctx.textAlign='center';ctx.textBaseline='bottom';
+  for(let k=0;k<GEO.th.length;k++){const xm=0.5*(GEO.xb[k]+GEO.xb[k+1])/d;ctx.fillText(fmtTheta(GEO.th[k])+'°',A.X(xm),A.Y(zfAt(xm*d)/d)-4);}
+}
+$('lprof').addEventListener('click',ev=>{if(!LP.A)return;const rc=ev.currentTarget.getBoundingClientRect();const bx=LP.bx,Lx=GEO.Lx/dd();
+  const x=(ev.clientX-rc.left-bx[0])/(bx[2]-bx[0])*Lx;if(x<0||x>Lx)return;P.xs=Math.round(x);B.xs.sync();ST.n=0;resetStationTS();});
+function renderLdist(){
+  const cv=$('ldist'),w=cv.clientWidth;if(!w)return;const h=chartH(w,0.55,200,280);
+  const ctx=fit(cv,w,h);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,h);
+  if(SIM.phase!=='run')return;const d=dd(),nx=FL.nx,Lx=GEO.Lx/d;
+  let lo=-1,hi=1;for(let j=0;j<nx;j++){lo=Math.min(lo,FL.dzb[j]/d);hi=Math.max(hi,FL.dzb[j]/d,FL.h[j]/d);}
+  const bx=[44,10,w-12,h-26];const A=axes(ctx,bx,[0,Lx],[lo*1.1,hi*1.1],'x [×d]','[×d]');
+  ctx.strokeStyle=rgba(T.ink,0.4);ctx.beginPath();ctx.moveTo(bx[0],A.Y(0));ctx.lineTo(bx[2],A.Y(0));ctx.stroke();
+  ctx.fillStyle=rgba(T.cend,0.3);ctx.beginPath();ctx.moveTo(A.X(0.5*FL.dx/d),A.Y(0));
+  for(let j=0;j<nx;j++)ctx.lineTo(A.X((j+0.5)*FL.dx/d),A.Y(FL.dzb[j]/d));ctx.lineTo(A.X((nx-0.5)*FL.dx/d),A.Y(0));ctx.closePath();ctx.fill();
+  const ln=(f,col,lw)=>{ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();for(let j=0;j<nx;j++){const x=A.X((j+0.5)*FL.dx/d),y=A.Y(f(j));j?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();};
+  ln(j=>FL.dzb[j]/d,rgba(T.cend,1),1.8);ln(j=>FL.h[j]/d,rgba(T.water,1),1.5);
+  breakLines(ctx,A,bx[1],bx[3],d);
+  const xs=A.X(P.xs);ctx.strokeStyle=rgba(T.focus,1);ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(xs,bx[1]);ctx.lineTo(xs,bx[3]);ctx.stroke();
+}
+function renderLconc(){
+  const cv=$('lconc'),w=cv.clientWidth;if(!w)return;const h=chartH(w,0.55,200,280);
+  const ctx=fit(cv,w,h);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,h);
+  if(SIM.phase!=='run')return;const d=dd(),nx=FL.nx,Lx=GEO.Lx/d,Cs=P.Cstar;
+  let qmax=1;for(let j=0;j<nx;j++)qmax=Math.max(qmax,Math.abs(FL.qs[j])*1e4);
+  const bx=[44,10,w-48,h-26];const A=axes(ctx,bx,[0,Lx],[0,1],'x [×d]','C/C*');
+  const Yq=rightAxis(ctx,bx,[0,qmax*1.1],'q_s cm²/s');
+  ctx.strokeStyle=rgba(T.lift,1);ctx.lineWidth=1.2;ctx.beginPath();for(let j=0;j<nx;j++){const x=A.X((j+0.5)*FL.dx/d),y=Yq(Math.max(0,FL.qs[j]*1e4));j?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();
+  ctx.setLineDash([5,4]);ctx.strokeStyle=rgba(T.focus,1);ctx.lineWidth=1.4;
+  for(let k=0;k<GEO.th.length;k++){const c=cInf(GEO.th[k])/Cs;if(!isFinite(c))continue;const y=A.Y(Math.min(1,c));ctx.beginPath();ctx.moveTo(A.X(GEO.xb[k]/d),y);ctx.lineTo(A.X(GEO.xb[k+1]/d),y);ctx.stroke();}
+  ctx.setLineDash([]);
+  ctx.strokeStyle=rgba(T['grain-b'],1);ctx.lineWidth=1.8;ctx.beginPath();let pen=false;
+  for(let j=0;j<nx;j++){if(FL.h[j]<0.5*d){pen=false;continue;}const x=A.X((j+0.5)*FL.dx/d),y=A.Y(FL.Cb[j]/Cs);if(pen)ctx.lineTo(x,y);else{ctx.moveTo(x,y);pen=true;}}ctx.stroke();
+  breakLines(ctx,A,bx[1],bx[3],d);
+}
+
+/* ---------- x–t diagram ---------- */
+let xtCv=null,xtKey='';
+function renderXT(){
+  const cv=$('xt'),w=cv.clientWidth;if(!w)return;const h=chartH(w,0.42,220,360);
+  const ctx=fit(cv,w,h);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,h);
+  const R=REC_.xt,n=R.t.length;if(SIM.phase!=='run'||n<2)return;
+  const d=dd(),nx=FL.nx,Lx=GEO.Lx/d,v=$('xtvar').value,arr=R[v];
+  let vmax=0;for(let i=0;i<n;i++){const a=arr[i];for(let j=0;j<nx;j++){const x=v==='C'?a[j]/P.Cstar:a[j]/d;if(Math.abs(x)>vmax)vmax=Math.abs(x);}}
+  if(v==='C')vmax=1;vmax=Math.max(vmax,v==='dz'?0.5:0.5);
+  $('xt_scale').textContent=v==='dz'?'侵食 −'+vmax.toFixed(1)+'d ← 0 → 堆積 +'+vmax.toFixed(1)+'d':v==='h'?'水深 0 → '+vmax.toFixed(1)+'d':'C̄/C* 0 → 1';
+  $('xt_sub').textContent='横軸 x [×d]、縦軸 時間 t [s]（上が新しい）';
+  const tB=Math.max(R.t[n-1],1),bx=[44,10,w-12,h-26];
+  const A=axes(ctx,bx,[0,Lx],[0,tB],'x [×d]','t [s]');
+  if(!xtCv)xtCv=document.createElement('canvas');
+  const key=n+':'+v+':'+vmax.toFixed(3)+':'+R.t[n-1];
+  if(key!==xtKey||xtDirty){xtCv.width=nx;xtCv.height=n;const c2=xtCv.getContext('2d'),img=c2.createImageData(nx,n),px=img.data;
+    for(let i=0;i<n;i++){const a=arr[i];for(let j=0;j<nx;j++){let c;
+      if(v==='dz'){let t=a[j]/d/vmax;t=t<-1?-1:t>1?1:t;c=LUTD[Math.round(t*100)+100];}
+      else if(v==='h'){let t=a[j]/d/vmax;t=t<0?0:t>1?1:t;c=LUTH[Math.round(t*100)];}
+      else{let t=a[j]/P.Cstar;t=t<0?0:t>1?1:t;c=LUTC[Math.round(t*100)];}
+      const o=((n-1-i)*nx+j)*4;px[o]=c[0];px[o+1]=c[1];px[o+2]=c[2];px[o+3]=255;}}
+    c2.putImageData(img,0,0);xtKey=key;xtDirty=false;}
+  ctx.save();ctx.beginPath();ctx.rect(bx[0],bx[1],bx[2]-bx[0],bx[3]-bx[1]);ctx.clip();ctx.imageSmoothingEnabled=false;
+  const dtc=(R.t[n-1]-R.t[0])/(n-1);ctx.drawImage(xtCv,A.X(0),A.Y(R.t[n-1]),A.X(Lx)-A.X(0),A.Y(Math.max(0,R.t[0]-dtc))-A.Y(R.t[n-1]));
+  const F=REC_.front,m=F.t.length;
+  const fl=(arrx,col)=>{ctx.strokeStyle=col;ctx.lineWidth=1.6;ctx.beginPath();let pen=false;for(let i=0;i<m;i++){if(arrx[i]<=0){pen=false;continue;}const x=A.X(arrx[i]/d),y=A.Y(F.t[i]);if(pen)ctx.lineTo(x,y);else{ctx.moveTo(x,y);pen=true;}}ctx.stroke();};
+  fl(F.xw,rgba(T.water,1));fl(F.xs,rgba(T.ink,0.9));
+  ctx.restore();breakLines(ctx,A,bx[1],bx[3],d);
+}
+
+/* ---------- station charts ---------- */
+function renderSprof(){
+  const cv=$('sprof'),w=cv.clientWidth;if(!w)return;const h=chartH(w,0.7,240,340);
+  const ctx=fit(cv,w,h);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,h);
+  if(SIM.phase!=='run'||ST.n<2)return;const d=dd(),js=stationCol(),hd=Math.max(0,FL.eta[js]-FL.zb[js])/d;
+  $('sp_sub').textContent='x = '+P.xs+'d（幅3d）、縦軸 (y−z_b)/d';
+  const ylo=-4,yhi=Math.max(3,hd+1.5);let um=0.2;
+  for(let k=0;k<ST.nb;k++){const z=ST.lo+(k+0.5)*ST.bw;if(z>yhi)break;um=Math.max(um,ST.uf[k],ST.up[k]);}
+  const bx=[46,22,w-12,h-26];
+  const A=axes(ctx,bx,[0,1],[ylo,yhi],'C','(y−z_b)/d');
+  const Xu=v=>bx[0]+v/(um*1.1)*(bx[2]-bx[0]);
+  ctx.font=T.mono;ctx.fillStyle=rgba(T.water,1);ctx.textAlign='center';ctx.textBaseline='bottom';
+  const su=niceStep(um*1.1,(bx[2]-bx[0])/70);for(let v=0;v<=um*1.1+1e-9;v+=su)ctx.fillText(fmtTick(v,su),Xu(v),bx[1]-2);
+  ctx.textAlign='right';ctx.fillText('u [m/s]',bx[2],bx[1]-12);
+  ctx.setLineDash([4,3]);ctx.strokeStyle=rgba(T.ink,0.5);ctx.beginPath();ctx.moveTo(bx[0],A.Y(0));ctx.lineTo(bx[2],A.Y(0));ctx.stroke();
+  ctx.strokeStyle=rgba(T.water,0.9);ctx.beginPath();ctx.moveTo(bx[0],A.Y(hd));ctx.lineTo(bx[2],A.Y(hd));ctx.stroke();
+  ctx.strokeStyle=rgba(T.muted,1);ctx.beginPath();ctx.moveTo(A.X(P.Cstar),A.Y(ylo));ctx.lineTo(A.X(P.Cstar),A.Y(0));ctx.stroke();ctx.setLineDash([]);
+  const k0=0,k1=Math.min(ST.nb-1,Math.round((yhi-ST.lo)/ST.bw));const zOf=k=>ST.lo+(k+0.5)*ST.bw;
+  const draw=(f,col,lw,X)=>{ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();let pen=false;for(let k=k0;k<=k1;k++){const v=f(k);if(!isFinite(v)){pen=false;continue;}const x=X(v),y=A.Y(zOf(k));if(pen)ctx.lineTo(x,y);else{ctx.moveTo(x,y);pen=true;}}ctx.stroke();};
+  if(SIM.grad!=='uniform'){draw(k=>ST.c0[k],rgba(T.lift,1),1.4,A.X);draw(k=>ST.c1[k],rgba(T.cy,1),1.4,A.X);}
+  draw(k=>ST.tot[k],rgba(T.cend,1),2.2,A.X);
+  draw(k=>zOf(k)<=hd?ST.uf[k]:NaN,rgba(T.water,1),2,Xu);
+  ctx.fillStyle=rgba(T['grain-b'],1);for(let k=k0;k<=k1;k++){if(ST.tot[k]<0.02)continue;ctx.beginPath();ctx.arc(Xu(Math.max(0,ST.up[k])),A.Y(zOf(k)),2.2,0,2*PI);ctx.fill();}
+  ctx.lineWidth=1;
+}
+let tsT0=0;function resetStationTS(){tsT0=SIM.t;}
+function renderSts(){
+  const cv=$('sts'),w=cv.clientWidth;if(!w)return;const h=chartH(w,0.7,240,340);
+  const ctx=fit(cv,w,h);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,h);
+  const R=REC_.ts;let n=R.t.length;if(SIM.phase!=='run'||n<2)return;const d=dd();
+  let i0=0;while(i0<n-1&&R.t[i0]<tsT0)i0++;if(n-i0<2)return;
+  const tA=R.t[i0],tB=Math.max(R.t[n-1],tA+1);
+  const panels=[{f:[[R.h,v=>v/d,T.water],[R.dz,v=>v/d,T.cend]],lab:'h/d, Δz_b/d'},{f:[[R.C,v=>v/P.Cstar,T['grain-b']]],lab:'C̄/C*',fix:[0,1]},{f:[[R.qs,v=>v*1e4,T.lift]],lab:'q_s [cm²/s]'}];
+  const ph=(h-30)/3;
+  panels.forEach((p,ix)=>{let lo=Infinity,hi=-Infinity;for(const [a,fn] of p.f)for(let i=i0;i<n;i++){const v=fn(a[i]);if(v<lo)lo=v;if(v>hi)hi=v;}
+    if(p.fix){lo=p.fix[0];hi=p.fix[1];}if(!(hi>lo)){hi=lo+1;}const pad=(hi-lo)*0.08;
+    const bx=[46,8+ix*ph,w-12,8+(ix+1)*ph-14];const A=axes(ctx,bx,[tA,tB],[lo-pad,hi+pad],ix===2?'t [s]':'',p.lab);
+    for(const [a,fn,col] of p.f){ctx.strokeStyle=rgba(col,1);ctx.lineWidth=1.5;ctx.beginPath();for(let i=i0;i<n;i++){const x=A.X(R.t[i]),y=A.Y(fn(a[i]));i===i0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();}});
+}
+function renderBud(){
+  const cv=$('bud'),w=cv.clientWidth;if(!w)return;const h=chartH(w,0.6,200,300);
+  const ctx=fit(cv,w,h);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,h);
+  const R=REC_.bud,n=R.t.length;if(SIM.phase!=='run'||n<2)return;
+  let lo=0,hi=1;for(const k of ['Vin','Vout','dVs','Vm'])for(let i=0;i<n;i++){const v=R[k][i]*1e4;if(v<lo)lo=v;if(v>hi)hi=v;}
+  const bx=[50,10,w-12,h-26];const A=axes(ctx,bx,[0,Math.max(1,R.t[n-1])],[lo*1.08,hi*1.08],'t [s]','cm²');
+  ctx.strokeStyle=rgba(T.ink,0.4);ctx.beginPath();ctx.moveTo(bx[0],A.Y(0));ctx.lineTo(bx[2],A.Y(0));ctx.stroke();
+  for(const [k,col] of [['Vin',T.ink],['dVs',T.cend],['Vm',T.water],['Vout',T.focus]]){ctx.strokeStyle=rgba(col,1);ctx.lineWidth=1.6;ctx.beginPath();
+    for(let i=0;i<n;i++){const x=A.X(R.t[i]),y=A.Y(R[k][i]*1e4);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
+  const i=n-1,init=SIM.mode0Moving||0;const lhs=R.Vin[i],rhs=R.dVs[i]+R.Vm[i]+R.Vout[i];
+  let tx='現在：供給 '+(lhs*1e4).toFixed(1)+'　＝　堆積・侵食 '+(R.dVs[i]*1e4).toFixed(1)+'　＋　移動中 '+(R.Vm[i]*1e4).toFixed(1)+'　＋　流出 '+(R.Vout[i]*1e4).toFixed(1)+' cm²（差 '+((lhs-rhs)*1e4).toFixed(2)+'）';
+  if(SIM.grad!=='uniform'&&SIM.VinW>0)tx+='／ 供給土砂の粗粒分率 '+(SIM.VinC/SIM.VinW).toFixed(2);
+  if(P.mode==='steady'&&SIM.Vdue>0.05*Math.max(SIM.Vin,1e-4))tx+='／ ⚠ 供給待ち '+(SIM.Vdue*1e4).toFixed(1)+' cm²（流入区間が詰まっています）';
+  $('budstat').textContent=tx;
+}
+function renderFronts(){
+  const cv=$('fronts'),w=cv.clientWidth;if(!w)return;const h=chartH(w,0.6,200,300);
+  const ctx=fit(cv,w,h);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,h);
+  const R=REC_.front,n=R.t.length;if(SIM.phase!=='run'||n<2)return;const d=dd(),Lx=GEO.Lx/d;
+  const bx=[44,10,w-12,h-26];const A=axes(ctx,bx,[0,Math.max(1,R.t[n-1])],[0,Lx],'t [s]','x [×d]');
+  ctx.setLineDash([4,4]);ctx.strokeStyle=rgba(T.focus,0.7);for(let k=1;k<GEO.xb.length-1;k++){const y=A.Y(GEO.xb[k]/d);ctx.beginPath();ctx.moveTo(bx[0],y);ctx.lineTo(bx[2],y);ctx.stroke();}ctx.setLineDash([]);
+  for(const [k,col] of [['xw',T.water],['xs',T.ink],['xd',T.cend]]){ctx.strokeStyle=rgba(col,1);ctx.lineWidth=1.6;ctx.beginPath();
+    for(let i=0;i<n;i++){const x=A.X(R.t[i]),y=A.Y(R[k][i]/d);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
+}
+
+/* ---------- focus particle ---------- */
+function arrow(ctx,x,y,dx,dy,col,lw){const L=Math.hypot(dx,dy);if(L<2)return;ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=lw;
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx,y+dy);ctx.stroke();const ux=dx/L,uy=dy/L,hs=Math.min(9,3+L*0.25);
+  ctx.beginPath();ctx.moveTo(x+dx,y+dy);ctx.lineTo(x+dx-ux*hs-uy*hs*0.5,y+dy-uy*hs+ux*hs*0.5);ctx.lineTo(x+dx-ux*hs+uy*hs*0.5,y+dy-uy*hs-ux*hs*0.5);ctx.closePath();ctx.fill();}
+function lastSample(){if(!tsCount)return null;const h=tsIdx(0);const o={};for(const k in TS)o[k]=TS[k][h];return o;}
+function renderFzoom(){
+  const cv=$('fzoom'),w=Math.min(320,cv.parentElement.clientWidth);if(!w)return;
+  const ctx=fit(cv,w,w);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,w);
+  if(FOC<0||SIM.phase!=='run')return;
+  const f=FOC,rf=PR[f],Rv=2.6*rf+1.6*dd(),s=(w/2)/Rv,cx=w/2,cy=w/2;
+  const eta=fluidAt(PX[f],PY[f]).eta;const yS=cy-(eta-PY[f])*s;
+  if(yS<w){ctx.fillStyle=rgba(T['water-soft'],1);ctx.fillRect(0,Math.max(0,yS),w,w-Math.max(0,yS));}
+  for(let i=0;i<N;i++){if(i===f)continue;const dx=PX[i]-PX[f],dy=PY[i]-PY[f];if(Math.abs(dx)>Rv+PR[i]||Math.abs(dy)>Rv+PR[i])continue;
+    ctx.fillStyle=PFIX[i]===1?rgba(T.fixed,1):LUTS[SIM.dmax===SIM.dmin?32:Math.max(0,Math.min(63,Math.round((2*PR[i]-SIM.dmin)/(SIM.dmax-SIM.dmin)*63)))];
+    ctx.beginPath();ctx.arc(cx+dx*s,cy-dy*s,PR[i]*s*0.95,0,2*PI);ctx.fill();}
+  ctx.fillStyle=rgba(T.focus,1);ctx.beginPath();ctx.arc(cx,cy,rf*s*0.95,0,2*PI);ctx.fill();
+  const Wp=wsub(rf);ctx.lineCap='round';
+  for(let k=0;k<FCn;k++){const o=FCo[k];const dx=PX[o]-PX[f],dy=PY[o]-PY[f];const lw=Math.min(11,1+2.2*Math.sqrt(FCfn[k]/Wp));ctx.lineWidth=lw;
+    ctx.strokeStyle=FCmob[k]>0.999?rgba(T.warn,1):rgba(T.ink,0.75);ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+dx*s,cy-dy*s);ctx.stroke();}
+  const S=lastSample();if(!S)return;const k=rf*s*1.3/Wp,cap=Rv*s*0.92;
+  const cl=(fx,fy)=>{const m=Math.hypot(fx,fy)*k;const sc=m>cap?cap/m:1;return [fx*k*sc,-fy*k*sc];};
+  let a=cl(S.fdx,S.fdy);arrow(ctx,cx,cy,a[0],a[1],rgba(T.water,1),2.5);
+  a=cl(0,S.fl);arrow(ctx,cx,cy,a[0],a[1],rgba(T.lift,1),2.5);
+  a=cl(S.fbx,-PM[f]*G+S.fb);arrow(ctx,cx,cy,a[0],a[1],rgba(T.muted,1),2.5);
+  a=cl(S.fcx,S.fcy);arrow(ctx,cx,cy,a[0],a[1],rgba(T.cy,1),2.5);
+  // 河床の向き
+  const al=S.al;ctx.strokeStyle=rgba(T.ink,0.35);ctx.setLineDash([4,3]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx-w*0.45*Math.cos(al),cy-w*0.45*Math.sin(al));ctx.lineTo(cx+w*0.45*Math.cos(al),cy+w*0.45*Math.sin(al));ctx.stroke();ctx.setLineDash([]);
+  ctx.font=T.mono;ctx.fillStyle=rgba(T.muted,1);ctx.textAlign='left';ctx.textBaseline='bottom';ctx.fillText('矢印 1 W′ = '+(rf*s*1.3).toFixed(0)+' px　点線：河床面の向き',6,w-4);
+}
+function rot(fx,fy,al){return [fx*Math.cos(al)-fy*Math.sin(al),fx*Math.sin(al)+fy*Math.cos(al)];}  // (t, n) 成分
+function renderFts(){
+  const cv=$('fts'),w=cv.clientWidth;if(!w)return;const h=chartH(w,0.26,180,250);
+  const ctx=fit(cv,w,h);ctx.fillStyle=rgba(T.panel,1);ctx.fillRect(0,0,w,h);
+  if(tsCount<2)return;const tEnd=TS.t[tsIdx(0)],tBeg=tEnd-2;let n=0,amax=1.2;
+  const comp=(i)=>{const al=TS.al[i],wp=TS.wp[i];const D=rot(TS.fdx[i],TS.fdy[i],al),L=rot(0,TS.fl[i],al),C=rot(TS.fcx[i],TS.fcy[i],al);return [D[0]/wp,L[1]/wp,C[0]/wp,C[1]/wp];};
+  for(let b=0;b<tsCount;b++){const i=tsIdx(b);if(TS.t[i]<tBeg)break;n++;for(const v of comp(i))if(Math.abs(v)>amax)amax=Math.abs(v);}
+  amax=Math.min(amax*1.08,200);
+  const A=axes(ctx,[46,10,w-12,h-26],[Math.max(0,tBeg),Math.max(tEnd,2)],[-amax,amax],'t [s]','F/W′');
+  ctx.strokeStyle=rgba(T.ink,0.5);ctx.beginPath();ctx.moveTo(A.X(Math.max(0,tBeg)),A.Y(0));ctx.lineTo(A.X(Math.max(tEnd,2)),A.Y(0));ctx.stroke();
+  const draw=(ix,col,dash)=>{ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.setLineDash(dash||[]);ctx.beginPath();
+    for(let b=n-1;b>=0;b--){const i=tsIdx(b);const x=A.X(TS.t[i]),y=A.Y(comp(i)[ix]);b===n-1?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();ctx.setLineDash([]);};
+  draw(3,rgba(T.cy,0.9),[4,3]);draw(2,rgba(T.cy,1));draw(1,rgba(T.lift,1));draw(0,rgba(T.water,1));ctx.lineWidth=1;
+}
+function f2(v){if(!isFinite(v))return '—';const a=Math.abs(v);return a>=100?v.toFixed(0):a>=10?v.toFixed(1):v.toFixed(2);}
+function fsig(v,u){if(!isFinite(v))return '—';const a=Math.abs(v);if(a>=1000)return (v/1000).toFixed(2)+' k'+u;return (a>=100?v.toFixed(0):a>=10?v.toFixed(1):v.toFixed(2))+' '+u;}
+function updateFocusPanel(){
+  const pill=$('f_pill');if(FOC<0||SIM.phase!=='run'){$('ftab').innerHTML='';$('fkv').innerHTML='';return;}
+  const f=FOC,S=lastSample();if(!S)return;const Wp=S.wp,al=S.al,d=dd();
+  const rows=[['重力 W',0,-PM[f]*G,'muted'],['静水圧 F_P',S.fbx,S.fb,'muted'],['抗力 F_D',S.fdx,S.fdy,'water'],['揚力 F_L',0,S.fl,'lift'],['接触力 ΣF_c',S.fcx,S.fcy,'cy']];
+  let sx=0,sy=0;for(const r of rows){sx+=r[1];sy+=r[2];}rows.push(['合力',sx,sy,'ink']);
+  let html='<thead><tr><th>力</th><th>t / W′</th><th>n / W′</th><th>|F| [mN]</th></tr></thead><tbody>';
+  for(const r of rows){const q=rot(r[1],r[2],al);html+='<tr><td><span class="sw" style="background:var(--'+r[3]+')"></span>'+r[0]+'</td><td>'+f2(q[0]/Wp)+'</td><td>'+f2(q[1]/Wp)+'</td><td>'+f2(Math.hypot(r[1],r[2])*1000)+'</td></tr>';}
+  $('ftab').innerHTML=html+'</tbody>';
+  const r=PR[f],V=V43*r*r*r,sxx=FR.sxx/V,syy=FR.syy/V,sxy=FR.sxy/V,p=0.5*(sxx+syy),q=Math.sqrt(0.25*(sxx-syy)**2+sxy*sxy);
+  const ang=0.5*Math.atan2(2*sxy,sxx-syy)*180/PI-al*180/PI;
+  const Fs=fluidAt(PX[f],PY[f]);const ts=Fs.us*Fs.us/((P.sigma/P.rho-1)*G*2*r);
+  let ir=0;for(let k=0;k<IMP.length;k+=2)if(IMP[k]>SIM.t-1)ir++;const lastV=IMP.length?IMP[IMP.length-1]:NaN;
+  const v=rot(PVX[f],PVY[f],al);
+  const kv=[['粒径 d_f',(2000*r).toFixed(1)+' mm（'+(2*r/d).toFixed(2)+'d）'],['水中重量 W′',f2(Wp*1000)+' mN'],['位置 x',(PX[f]/d).toFixed(1)+'d'],
+    ['局所の河床勾配',(al*180/PI).toFixed(1)+'°'],['埋没深さ (z_b−y_c)/d',f2((zbAt(PX[f])-PY[f])/d)],['水深 h/d',f2(Fs.h/d)],
+    ['接触数 Z',String(FR.nc)],['滑動接点',String(FR.nslip)],['最大摩擦動員 |F_t|/μF_n',f2(FR.mob)],
+    ['粒子応力 p',fsig(p,'Pa')],['偏差応力 q',fsig(q,'Pa')],['最大主応力の向き（河床から）',ang.toFixed(0)+'°'],
+    ['u_t / u_n',f2(v[0])+' / '+f2(v[1])+' m/s'],['回転 ω',f2(POM[f])+' rad/s'],['τ*（d_f基準、局所）',f2(ts)],
+    ['衝突頻度',ir+' 回/s'],['直近の衝突速度',isFinite(lastV)?f2(lastV)+' m/s':'—']];
+  $('fkv').innerHTML=kv.map(a=>'<div><dt>'+a[0]+'</dt><dd>'+a[1]+'</dd></div>').join('');
+  if(PFIX[f]===2){pill.className='pill hold';pill.textContent='固定（力センサー）';}
+  else if(isStatic(f)){pill.className='pill rest';pill.textContent='静止';}else{pill.className='pill move';pill.textContent='移動中';}
+}
+
+/* ---------- readout ---------- */
+let rtE=0;
+function updateReadout(){
+  const run=SIM.phase==='run',d=dd(),cm=v=>(v*1e4).toFixed(1)+' cm²';
+  $('ro_t').textContent=run?SIM.t.toFixed(2)+' s':'—';$('ro_rt').textContent=run?'×'+rtE.toFixed(3):'—';
+  $('ro_n').textContent=N.toLocaleString('ja-JP')+(SIM.nSleep?' ('+SIM.nSleep.toLocaleString('ja-JP')+')':'');
+  const F=REC_.front,k=F.t.length-1;
+  $('ro_xw').textContent=run&&k>=0?(F.xw[k]/d).toFixed(0)+'d':'—';$('ro_xs').textContent=run&&k>=0?(F.xs[k]/d).toFixed(0)+'d':'—';$('ro_xd').textContent=run&&k>=0?(F.xd[k]/d).toFixed(0)+'d':'—';
+  const R=REC_.bud,b=R.t.length-1;
+  $('ro_vin').textContent=run&&b>=0?cm(R.Vin[b]):'—';$('ro_vs').textContent=run&&b>=0?cm(R.dVs[b]):'—';$('ro_vm').textContent=run&&b>=0?cm(R.Vm[b]):'—';$('ro_vo').textContent=run&&b>=0?cm(R.Vout[b]):'—';
+  $('status').textContent=SIM.phase!=='run'?'水路を生成中':(!SIM.bedStable&&SIM.t<1?'⚠ 河床が静止しきらないまま開始':(running?'計算中':'一時停止'))+'　dt = '+(SIM.dt*1e6).toFixed(0)+' μs';
+}
+
+/* ---------- controls ---------- */
+const presets={sm:[{L:120,th:12},{L:180,th:3}],ms:[{L:120,th:3},{L:180,th:12}],sms:[{L:100,th:12},{L:100,th:3},{L:100,th:12}],ssm:[{L:100,th:15},{L:100,th:8},{L:100,th:2}]};
+let dirty=false;
+function markDirty(){dirty=true;const b=$('reset');b.classList.add('pending');b.textContent='再生成して反映';}
+function clearDirty(){dirty=false;const b=$('reset');b.classList.remove('pending');b.textContent='水路を再生成';}
+function segInfo(){let L=0,drop=0;for(const s of P.segs){L+=s.L;drop+=s.L*Math.tan(s.th*PI/180);}
+  $('seginfo').textContent='全長 '+L.toFixed(0)+'d（'+(L*(SIM.dref||P.d/1000)).toFixed(2)+' m）、落差 '+drop.toFixed(1)+'d';}
+function renderSegs(){const tb=$('segbody');tb.innerHTML='';
+  P.segs.forEach((s,k)=>{const tr=document.createElement('tr');
+    tr.innerHTML='<td>'+(k+1)+'</td><td><input type="number" min="10" max="2000" step="5" id="segL'+k+'" value="'+s.L+'" aria-label="区間'+(k+1)+'の長さ"></td><td><input type="number" min="0.001" max="25" step="0.5" id="segT'+k+'" value="'+s.th+'" aria-label="区間'+(k+1)+'の勾配"></td><td>'+(P.segs.length>1?'<button type="button" data-del="'+k+'" aria-label="区間'+(k+1)+'を削除">×</button>':'')+'</td>';
+    tb.appendChild(tr);
+    tr.querySelector('#segL'+k).addEventListener('change',e=>{s.L=Math.max(10,Math.min(2000,+e.target.value||s.L));e.target.value=s.L;segInfo();markDirty();});
+    tr.querySelector('#segT'+k).addEventListener('change',e=>{s.th=Math.max(0.001,Math.min(25,+e.target.value||s.th));e.target.value=s.th;segInfo();markDirty();});
+    const del=tr.querySelector('[data-del]');if(del)del.addEventListener('click',()=>{P.segs.splice(k,1);renderSegs();markDirty();});});
+  $('segadd').disabled=P.segs.length>=5;segInfo();if($('seginfo').dataset.light)$('seginfo').textContent+='（スマホ向けの軽い設定で開始）';}
+$('segadd').addEventListener('click',()=>{if(P.segs.length>=5)return;const l=P.segs[P.segs.length-1];P.segs.push({L:100,th:l?l.th:5});renderSegs();markDirty();});
+document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{P.segs=presets[b.dataset.preset].map(s=>({...s}));renderSegs();markDirty();}));
+function bind(base,key,opt){
+  const r=$(base+'_r'),n=$(base+'_n');opt=opt||{};
+  const set=(v,src)=>{if(!isFinite(v))return;if(n.min!=='')v=Math.max(+n.min,v);if(n.max!=='')v=Math.min(+n.max,v);P[key]=v;
+    if(src!=='r')r.value=v;if(src!=='n')n.value=opt.fmt?opt.fmt(v):+(+v).toFixed(4);
+    if(opt.live)opt.live(v);if(opt.regen)markDirty();if(opt.info)opt.info(v);};
+  r.addEventListener('input',()=>set(+r.value,'r'));n.addEventListener('change',()=>set(+n.value,'n'));
+  return {sync:()=>{r.value=P[key];n.value=opt.fmt?opt.fmt(P[key]):+(+P[key]).toFixed(4);if(opt.info)opt.info(P[key]);}};
+}
+const B={};
+B.q=bind('q','q',{info:v=>{$('q_info').textContent='水 '+(v*(1-(P.mode==='steady'?P.Cin:0))*1000).toFixed(1)+' L/s/m';}});
+B.Cin=bind('cin','Cin',{info:v=>{$('cin_info').textContent='C_in/C* = '+(v/P.Cstar).toFixed(2);B.q&&B.q.sync&&$('q_info')&&($('q_info').textContent='水 '+(P.q*(1-v)*1000).toFixed(1)+' L/s/m');}});
+B.Tsup=bind('tsup','Tsup',{});
+B.Lres=bind('lres','Lres',{regen:true});B.Hres=bind('hres','Hres',{regen:true});B.Wres=bind('wres','Wres',{regen:true});
+B.Hb=bind('hb','Hb',{regen:true,info:()=>updEstimate()});B.bedFrom=bind('bf','bedFrom',{regen:true});
+B.Cstar=bind('cs','Cstar',{regen:true});B.seed=bind('seed','seed',{regen:true,fmt:v=>Math.round(v)});
+B.d=bind('d','d',{regen:true,info:()=>updEstimate()});B.d1=bind('d1','d1',{regen:true,info:()=>updEstimate()});B.d2=bind('d2','d2',{regen:true,info:()=>updEstimate()});B.p2=bind('p2','p2',{regen:true,info:()=>updEstimate()});
+B.d50=bind('d50','d50',{regen:true,info:()=>updEstimate()});B.sg=bind('sg','sg',{regen:true,info:()=>updEstimate()});B.sigma=bind('sig','sigma',{regen:true});
+B.mu=bind('mu','mu',{});B.e=bind('e','e',{live:derive});B.mur=bind('mur','mur',{});B.phiInt=bind('phi','phiInt',{});
+B.rho=bind('rho','rho',{});B.CL=bind('cl','CL',{});
+B.xs=bind('xs','xs',{live:()=>{ST.n=0;resetStationTS();},info:v=>{$('xs_info').textContent=GEO.Lx?('区間 '+(segAt(v*dd())+1)+'（'+fmtTheta(thAt(v*dd()))+'°）'):'';}});
+B.df=bind('df','df',{live:v=>{if(SIM.phase==='run'&&FOC>=0)setFocusSize(v);},info:v=>{$('df_info').textContent='d_f/d = '+(v/(dd()*1000)).toFixed(2);}});
+B.fdepth=bind('fz','fdepth',{live:()=>{previewUntil=performance.now()+3000;},info:v=>{$('fz_info').textContent=v>0?'= '+(v*dd()*1000).toFixed(1)+' mm':'河床表面';}});
+function updEstimate(){const el=$('hb_info');if(!el)return;
+  const keep={dref:SIM.dref,dmin:SIM.dmin,dmax:SIM.dmax,d1:SIM.d1,d2:SIM.d2};computeSizes();let a=0;const n=200,rs=rngS;for(let k=0;k<n;k++){const dm=sampleD();a+=PI*dm*dm/4;}a/=n;rngS=rs;
+  const dr=SIM.dref;let L=0;for(const s of P.segs)L+=s.L;const est=L*dr*P.Hb*dr*0.82/a+(P.mode==='surge'?P.Lres*dr*P.Hres*dr*0.82/a:0);Object.assign(SIM,keep);
+  el.textContent='推定 '+(Math.round(est/50)*50).toLocaleString('ja-JP')+' 粒子';el.style.color=est>4000?'var(--warn)':'';}
+function syncRanges(){const Ld=Math.round(GEO.Lx/dd());for(const id of ['xs_r','xs_n'])$(id).max=String(Ld);P.xs=Math.min(P.xs,Ld-2);
+  const dr=dd()*1000;for(const id of ['df_r','df_n']){const el=$(id);el.min=(0.3*dr).toFixed(1);el.max=(4*dr).toFixed(1);}P.df=Math.max(0.3*dr,Math.min(4*dr,P.df));}
+function syncAll(){for(const k in B)B[k].sync();$('turb').checked=P.turb;$('hold').checked=P.hold;$('colmode').value=P.color;$('chains').checked=P.chains;$('sleep').checked=P.sleep;$('follow').checked=P.follow;
+  for(const m of ['steady','surge','clear'])$('mode_'+m).setAttribute('aria-pressed',String(P.mode===m));
+  $('g_q').hidden=P.mode==='surge';$('g_surge').hidden=P.mode!=='surge';$('g_cin').hidden=P.mode!=='steady';
+  for(const g of ['uniform','binary','lognormal']){$('grad_'+g).setAttribute('aria-pressed',String(P.grad===g));$('g_'+g).hidden=P.grad!==g;}
+  document.querySelectorAll('[data-mix]').forEach(el=>{el.hidden=SIM.grad==='uniform';});}
+for(const m of ['steady','surge','clear'])$('mode_'+m).addEventListener('click',()=>{P.mode=m;syncAll();markDirty();updEstimate();});
+for(const g of ['uniform','binary','lognormal'])$('grad_'+g).addEventListener('click',()=>{P.grad=g;syncAll();markDirty();updEstimate();});
+$('turb').addEventListener('change',e=>{P.turb=e.target.checked;});
+$('hold').addEventListener('change',e=>{setHold(e.target.checked);});
+$('colmode').addEventListener('change',e=>{P.color=e.target.value;});
+$('chains').addEventListener('change',e=>{P.chains=e.target.checked;});
+$('sleep').addEventListener('change',e=>{P.sleep=e.target.checked;});
+$('follow').addEventListener('change',e=>{P.follow=e.target.checked;});
+$('ctau').addEventListener('change',e=>{P.ctau=+e.target.value;});
+$('xtvar').addEventListener('change',()=>{xtDirty=true;});
+$('place').addEventListener('click',()=>{if(SIM.phase!=='run')return;previewUntil=0;placeFocusAt(P.xs*dd(),P.fdepth,P.df/1000);});
+let running=true;
+function updRun(){$('run').textContent=running?'一時停止':'再開';}
+$('run').addEventListener('click',()=>{running=!running;updRun();});
+function doRegen(){regenerate();clearDirty();syncRanges();syncAll();renderSegs();xtDirty=true;tsT0=0;zoomC=null;}
+$('reset').addEventListener('click',()=>{doRegen();running=true;updRun();});
+function copyOut(s,box,msg,ok){box.value=s;const done=()=>{msg.textContent=ok;box.hidden=true;};
+  const fail=()=>{box.hidden=false;box.focus();box.select();msg.textContent='自動コピーできませんでした。下の欄を選択してコピーしてください';};
+  try{navigator.clipboard.writeText(s).then(done,fail);}catch(e){fail();}}
+function header(){return '# t='+SIM.t.toFixed(3)+'s, mode='+P.mode+', segs='+P.segs.map(s=>s.L+'d@'+s.th+'deg').join('|')+', d_ref='+(dd()*1000).toFixed(2)+'mm, grading='+SIM.grad+', Cstar='+P.Cstar+', q='+P.q+', Cin='+P.Cin+'\n';}
+$('copylp').addEventListener('click',()=>{if(SIM.phase!=='run'){$('lpmsg').textContent='まだデータがありません';return;}const d=dd();
+  let s=header()+'x_over_d,x_m,zf_m,zb0_m,zb_m,dzb_over_d,eta_m,h_over_d,U_mps,Cbar,Cinf_local,qs_m2ps\n';
+  for(let j=0;j<FL.nx;j++){const x=(j+0.5)*FL.dx,h=FL.h[j];s+=[(x/d).toFixed(2),x.toFixed(4),FL.zf[j].toFixed(5),FL.zb0[j].toFixed(5),FL.zb[j].toFixed(5),(FL.dzb[j]/d).toFixed(3),FL.eta[j].toFixed(5),(h/d).toFixed(3),h>0.2*d?(FL.Qs[j]/h).toFixed(4):'0',FL.Cb[j].toFixed(4),cInf(thAt(x)).toFixed(4),FL.qs[j].toExponential(4)].join(',')+'\n';}
+  copyOut(s,$('lpbox'),$('lpmsg'),FL.nx+' 柱をコピーしました');});
+$('copyprof').addEventListener('click',()=>{if(SIM.phase!=='run'||ST.n<2){$('profmsg').textContent='まだデータがありません';return;}
+  let s=header()+'# station x='+P.xs+'d, tau='+P.ctau+'s\nz_minus_zb_over_d,C_total,C_fine,C_coarse,u_f_mps,u_p_mps\n';const hd=FL.h[stationCol()]/dd();
+  for(let k=0;k<ST.nb;k++){const z=ST.lo+(k+0.5)*ST.bw;if(z>hd+2)break;s+=[z.toFixed(3),ST.tot[k].toFixed(4),ST.c0[k].toFixed(4),ST.c1[k].toFixed(4),ST.uf[k].toFixed(4),ST.up[k].toFixed(4)].join(',')+'\n';}
+  copyOut(s,$('profbox'),$('profmsg'),'鉛直分布をコピーしました');});
+$('copyts').addEventListener('click',()=>{const R=REC_.ts;if(!R.t.length){$('tsmsg').textContent='まだデータがありません';return;}
+  let s=header()+'# station x='+P.xs+'d\nt_s,h_m,U_mps,Cbar,qs_m2ps,dzb_m,eta_m\n';
+  for(let i=0;i<R.t.length;i++)s+=[R.t[i].toFixed(3),R.h[i].toFixed(5),R.U[i].toFixed(4),R.C[i].toFixed(4),R.qs[i].toExponential(4),R.dz[i].toFixed(5),R.eta[i].toFixed(5)].join(',')+'\n';
+  copyOut(s,$('tsbox'),$('tsmsg'),R.t.length+' 行をコピーしました');});
+$('copycsv').addEventListener('click',()=>{if(tsCount<1){$('copymsg').textContent='まだデータがありません';return;}
+  let s=header()+'t_s,FDx_N,FDy_N,FL_N,FPx_N,FPy_N,Fcx_N,Fcy_N,Z,u_p_mps,v_p_mps,x_m,y_m,p_Pa,q_Pa,Wsub_N,bed_angle_rad\n';
+  for(let b=tsCount-1;b>=0;b--){const i=tsIdx(b);s+=[TS.t[i].toFixed(4),TS.fdx[i].toExponential(4),TS.fdy[i].toExponential(4),TS.fl[i].toExponential(4),TS.fbx[i].toExponential(4),TS.fb[i].toExponential(4),
+    TS.fcx[i].toExponential(4),TS.fcy[i].toExponential(4),TS.nc[i].toFixed(2),TS.vx[i].toFixed(5),TS.vy[i].toFixed(5),TS.x[i].toFixed(5),TS.y[i].toFixed(5),TS.p[i].toFixed(2),TS.q[i].toFixed(2),TS.wp[i].toExponential(4),TS.al[i].toFixed(4)].join(',')+'\n';}
+  copyOut(s,$('csvbox'),$('copymsg'),tsCount+' 行をコピーしました');});
+
+/* ---------- loop ---------- */
+P.color='vel';P.chains=false;P.follow=true;
+let frameNo=0,lastReal=performance.now();
+function frame(now){
+  const realDt=Math.min(0.2,(now-lastReal)/1000);lastReal=now;
+  if(running&&SIM.phase!=='idle'){
+    const t0=performance.now(),simT0=SIM.t,wasRun=SIM.phase==='run';
+    while(performance.now()-t0<13){for(let m=0;m<8;m++)step(false);if(SIM.started&&!wasRun)break;}
+    step(true);
+    if(SIM.started&&!wasRun){SIM.started=false;syncRanges();syncAll();}
+    if(wasRun&&realDt>0)rtE+=((SIM.t-simT0)/realDt-rtE)*0.08;
+  }
+  renderOverview();renderZoomView();
+  if(frameNo%3===0){renderLprof();renderLdist();renderLconc();renderFzoom();renderFts();}
+  if(frameNo%3===1){renderSprof();renderSts();renderBud();renderFronts();}
+  if(frameNo%9===2)renderXT();
+  if(frameNo%8===0){updateReadout();updateFocusPanel();}
+  frameNo++;requestAnimationFrame(frame);
+}
+// スマホなど幅の狭い画面では、軽い設定（短い水路・薄い河床、約800粒子）で始める
+if(window.matchMedia&&matchMedia('(max-width: 700px)').matches){P.segs=[{L:80,th:12},{L:120,th:3}];P.Hb=4;P.bedFrom=12;P.xs=110;
+  const el=$('seginfo');if(el)el.dataset.light='1';}
+renderSegs();doRegen();updEstimate();updRun();
+requestAnimationFrame(frame);
+
+})();
+</script>
+
+</body>
+</html>

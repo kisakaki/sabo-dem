@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>砂防DEMシミュレータ</title>
+<meta name="description" content="個別要素法（DEM）で、土石流・掃流状集合流動・清水による河床の侵食と堆積をブラウザで調べられる2つのシミュレータ。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kisakaki.github.io/sabo-dem/">
+<meta property="og:title" content="砂防DEMシミュレータ">
+<meta property="og:description" content="個別要素法（DEM）で、土石流・掃流状集合流動・清水による河床の侵食と堆積をブラウザで調べられる2つのシミュレータ。">
+<meta property="og:image" content="https://kisakaki.github.io/sabo-dem/og-dem.png">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://kisakaki.github.io/sabo-dem/og-dem.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;600&family=Zen+Old+Mincho:wght@700&display=swap">
+<style>
+/* Layout: 1列の入口。見出し → 2つのシミュレータのカード（画像＋説明）→ 注意書き */
+:root{
+  --bg:#e7ecef; --panel:#f8fafb; --ink:#13202a; --muted:#566773; --line:#ccd6dc; --water:#25689a;
+  --f-display:"Zen Old Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
+  --f-body:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){:root{--bg:#0c141a;--panel:#121d25;--ink:#dce6ec;--muted:#8a9ba8;--line:#22303a;--water:#5aa5db;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 var(--f-body);padding-inline:16px;padding-block:28px 48px}
+main{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.eyebrow{margin:0;font-size:12px;letter-spacing:.08em;color:var(--muted)}
+h1{margin:2px 0 6px;font-family:var(--f-display);font-size:clamp(24px,4vw,34px);line-height:1.3;text-wrap:balance}
+.lead{margin:0;max-width:62ch;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:16px}
+a.card{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;color:inherit;text-decoration:none}
+a.card:hover{border-color:var(--water)}
+a.card:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+a.card img{display:block;width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;background:var(--line)}
+.card .txt{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px}
+.card h2{margin:0;font-size:17px}
+.card p{margin:0;font-size:13.5px;color:var(--muted)}
+.card .go{margin-top:4px;font-weight:600;color:var(--water);font-size:14px}
+.note{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;max-width:72ch}
+.note p{margin:0 0 6px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">個別要素法（DEM）× 流れの連成　ブラウザで動く研究用シミュレータ</p>
+    <h1>砂防DEMシミュレータ</h1>
+    <p class="lead">粒子一つひとつの動きと、粒子に働く力を解いて、土石流・掃流状集合流動・清水による河床の侵食と堆積を調べられます。インストール不要で、スマホでも動きます。</p>
+  </header>
+  <div class="cards">
+    <a class="card" href="dem/">
+      <img src="og-dem.png" alt="移動床DEM-流れ連成シミュレータの画面" width="1200" height="630">
+      <div class="txt">
+        <h2>移動床DEM-流れ連成シミュレータ</h2>
+        <p>一様な斜面の河床で、勾配・水深・粒度を変えながら侵食と堆積を見られます。注目した粒子に働く抗力・揚力・接触力と応力、濃度の鉛直分布も出せます。</p>
+        <span class="go">開く →</span>
+      </div>
+    </a>
+    <a class="card" href="flume/">
+      <img src="og-flume.png" alt="勾配変化水路DEMシミュレータの画面" width="1200" height="630">
+      <div class="txt">
+        <h2>勾配変化水路DEMシミュレータ</h2>
+        <p>急→緩、緩→急など、勾配が折れ曲がる水路に土砂と水を流し、折れ点での堆積の進み方や、粒子と流体の動きの違いを見られます。</p>
+        <span class="go">開く →</span>
+      </div>
+    </a>
+  </div>
+  <div class="note">
+    <p>研究用の試作版です。2次元の円形粒子で計算しているため、実際の礫より摩擦が小さく（実効的な内部摩擦角は約26°）、堆積が始まる勾配などは実際とずれます。</p>
+    <p>計算はすべてお使いの端末の中で行い、データはどこにも送信しません。粒子が多い設定では動きが遅くなります。</p>
+  </div>
+</main>
+</body>
+</html>
